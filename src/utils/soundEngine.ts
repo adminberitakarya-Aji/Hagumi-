@@ -2346,6 +2346,148 @@ class HagumiAudioEngine {
       // safe audio
     }
   }
+  // 🌸 Spring Haru: Sakura Wind + Koto Petal Drop
+  public playSeasonHaru() {
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // Wind whoosh
+      const bufLen = this.ctx.sampleRate * 1.2;
+      const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1);
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 600;
+      filter.Q.value = 0.6;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.045, now + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      noise.connect(filter); filter.connect(g); g.connect(this.ctx.destination);
+      noise.start(now); noise.stop(now + 1.2);
+
+      // Koto petal drop: descending pentatonic
+      [523.25, 392, 329.63, 261.63].forEach((f, i) => {
+        const o = this.ctx!.createOscillator();
+        const og = this.ctx!.createGain();
+        o.type = 'triangle';
+        o.frequency.value = f;
+        og.gain.setValueAtTime(0.06, now + i * 0.22);
+        og.gain.exponentialRampToValueAtTime(0.001, now + i * 0.22 + 0.55);
+        o.connect(og); og.connect(this.ctx!.destination);
+        o.start(now + i * 0.22); o.stop(now + i * 0.22 + 0.6);
+      });
+    } catch { /* safe */ }
+  }
+
+  // 🏮 Summer Natsu: Firefly Twinkle + Furin Chime
+  public playSeasonNatsu() {
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // Furin windchime trio
+      [2489.02, 2093, 2637].forEach((f, i) => {
+        const o = this.ctx!.createOscillator();
+        const og = this.ctx!.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        og.gain.setValueAtTime(0.07, now + i * 0.18);
+        og.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + 1.1);
+        o.connect(og); og.connect(this.ctx!.destination);
+        o.start(now + i * 0.18); o.stop(now + i * 0.18 + 1.2);
+      });
+      // Cicada buzz
+      const o2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      o2.type = 'sawtooth'; o2.frequency.value = 3200;
+      g2.gain.setValueAtTime(0, now + 0.4);
+      g2.gain.linearRampToValueAtTime(0.008, now + 0.6);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+      o2.connect(g2); g2.connect(this.ctx.destination);
+      o2.start(now + 0.4); o2.stop(now + 1.15);
+    } catch { /* safe */ }
+  }
+
+  // 🍁 Autumn Aki: Momiji Whisper + Shakuhachi Breath
+  public playSeasonAki() {
+    if (!this.ctx) return;
+    try {
+      this.playShakuhachiBreath(293.66, 1.4, 0.07); // D4 breath
+      setTimeout(() => this.playShakuhachiBreath(261.63, 1.2, 0.055), 600);
+      // Leaf rustle noise
+      const now = this.ctx.currentTime + 0.3;
+      const bufLen = this.ctx.sampleRate * 0.8;
+      const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.6;
+      const ns = this.ctx.createBufferSource();
+      ns.buffer = buf;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = 2000;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.03, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      ns.connect(f); f.connect(g); g.connect(this.ctx.destination);
+      ns.start(now); ns.stop(now + 0.8);
+    } catch { /* safe */ }
+  }
+
+  // ❄️ Winter Fuyu: Snow Crystal Chimes + Wind
+  public playSeasonFuyu() {
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // Crystal bell ascending
+      [1046.5, 1174.66, 1318.51, 1568].forEach((f, i) => {
+        const o = this.ctx!.createOscillator();
+        const og = this.ctx!.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        og.gain.setValueAtTime(0.05, now + i * 0.16);
+        og.gain.exponentialRampToValueAtTime(0.001, now + i * 0.16 + 0.9);
+        o.connect(og); og.connect(this.ctx!.destination);
+        o.start(now + i * 0.16); o.stop(now + i * 0.16 + 1.0);
+      });
+      // Blizzard wind
+      const bufLen = this.ctx.sampleRate * 1.5;
+      const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1);
+      const ns = this.ctx.createBufferSource();
+      ns.buffer = buf;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 400;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, now + 0.5);
+      g.gain.linearRampToValueAtTime(0.035, now + 0.9);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+      ns.connect(f); f.connect(g); g.connect(this.ctx.destination);
+      ns.start(now + 0.5); ns.stop(now + 1.5);
+    } catch { /* safe */ }
+  }
+
+  // Play seasonal transition sound based on season
+  public playSeasonTransition(season: 'spring' | 'summer' | 'autumn' | 'winter') {
+    if (!this.ctx) return;
+    switch (season) {
+      case 'spring': this.playSeasonHaru(); break;
+      case 'summer': this.playSeasonNatsu(); break;
+      case 'autumn': this.playSeasonAki(); break;
+      case 'winter': this.playSeasonFuyu(); break;
+    }
+  }
 }
 
 export const soundEngine = new HagumiAudioEngine();
+
+// Helper: detect current real-world season based on month
+export const detectRealSeason = (): 'spring' | 'summer' | 'autumn' | 'winter' => {
+  const month = new Date().getMonth(); // 0 = Jan ... 11 = Dec
+  if (month >= 2 && month <= 4) return 'spring';  // Mar-May
+  if (month >= 5 && month <= 7) return 'summer';  // Jun-Aug
+  if (month >= 8 && month <= 10) return 'autumn'; // Sep-Nov
+  return 'winter'; // Dec-Feb
+};

@@ -48,7 +48,7 @@ import { HapticSettingsModal } from './HapticSettingsModal';
 import { ParallaxSettingsModal } from './ParallaxSettingsModal';
 import { useParallax2D } from '../utils/useParallax2D';
 import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
-import { soundEngine } from '../utils/soundEngine';
+import { soundEngine, detectRealSeason } from '../utils/soundEngine';
 import { hapticEngine, HapticConfig } from '../utils/hapticFeedback';
 
 interface TatamiRoomProps {
@@ -195,11 +195,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   // Seasonal Weather state
   const [season, setSeason] = useState<SeasonType>(() => {
     if (pet.season) return pet.season;
-    const month = new Date().getMonth(); // 0 to 11
-    if (month >= 2 && month <= 4) return 'spring';
-    if (month >= 5 && month <= 7) return 'summer';
-    if (month >= 8 && month <= 10) return 'autumn';
-    return 'winter';
+    return detectRealSeason();
   });
 
   const [visitedShrines, setVisitedShrines] = useState<string[]>(() => pet.visitedShrines || []);
@@ -281,6 +277,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       sublabel: 'Pintu Shoji Membuka Musim Baru...',
       onMidpoint: () => {
         setSeason(nextSeason);
+        soundEngine.playSeasonTransition(nextSeason);
         showToast(`Musim Berganti: ${labels[nextSeason]}`);
       },
     });
