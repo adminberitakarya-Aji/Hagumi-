@@ -38,6 +38,8 @@ import { BackupRestoreModal } from './BackupRestoreModal';
 import { OdekakeModal } from './OdekakeModal';
 import { OdekakeReturnModal } from './OdekakeReturnModal';
 import { ZenGardenModal } from './ZenGardenModal';
+import { SeasonParticles } from './SeasonParticles';
+import { SeasonSwitcherPanel } from './SeasonSwitcherPanel';
 import { TatamiSanctuaryBackground } from './TatamiSanctuaryBackground';
 import { ShojiTransition } from './ShojiTransition';
 import { useShojiTransition } from '../hooks/useShojiTransition';
@@ -1142,6 +1144,9 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         tatamiParallaxStyle={parallax.tatamiStyle}
       />
 
+      {/* Seasonal Particles Overlay: Falling Sakura, Summer Fireflies, Autumn Momiji, Winter Snow */}
+      <SeasonParticles season={season} intensity="medium" />
+
       {/* TOP HEADER: Pet Identity, Level, Coins & Time Indicator */}
       <header className="relative z-10 max-w-4xl mx-auto w-full bg-[#201813]/90 backdrop-blur-md rounded-2xl border border-amber-700/60 px-2 py-1.5 sm:px-4 sm:py-2 shadow-lg flex-shrink-0">
         <div className="flex items-center justify-between gap-1.5 sm:gap-2">
@@ -1372,6 +1377,28 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             >
               <span className="text-xs">🐟</span>
               <span className="font-bold hidden xs:inline">Taman Zen</span>
+            </button>
+
+            {/* Season Switcher Quick Button */}
+            <button
+              onClick={() => {
+                soundEngine.playClick();
+                handleCycleSeason();
+              }}
+              title={`Ganti Musim: ${season === 'spring' ? '🌸 Haru (Semi)' : season === 'summer' ? '🏮 Natsu (Panas)' : season === 'autumn' ? '🍁 Aki (Gugur)' : '❄️ Fuyu (Dingin)'} → Musim Selanjutnya`}
+              className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-[10px] sm:text-xs font-extrabold shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0 ${
+                season === 'spring' ? 'bg-gradient-to-r from-pink-950/90 to-rose-950 border-pink-500/80 text-pink-200'
+                : season === 'summer' ? 'bg-gradient-to-r from-emerald-950/90 to-teal-950 border-green-500/80 text-green-200'
+                : season === 'autumn' ? 'bg-gradient-to-r from-orange-950/90 to-red-950 border-orange-500/80 text-orange-200'
+                : 'bg-gradient-to-r from-blue-950/90 to-indigo-950 border-blue-400/80 text-blue-200'
+              }`}
+            >
+              <span className="text-xs">
+                {season === 'spring' ? '🌸' : season === 'summer' ? '🏮' : season === 'autumn' ? '🍁' : '❄️'}
+              </span>
+              <span className="font-bold hidden sm:inline">
+                {season === 'spring' ? 'Haru' : season === 'summer' ? 'Natsu' : season === 'autumn' ? 'Aki' : 'Fuyu'}
+              </span>
             </button>
 
             {/* HUD Style Switcher (Sensu vs Classic Dock) - Desktop Only */}
@@ -2223,6 +2250,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         onOpenZenGarden={() => {
           setIsZenGardenOpen(true);
         }}
+        onCycleSeason={handleCycleSeason}
+        currentSeason={season}
       />
 
       {/* Petualangan Berkelana Roh (O-dekake / Tabi) Modal */}

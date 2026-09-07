@@ -22,6 +22,8 @@ interface SanctuaryMenuModalProps {
   onOpenBackupRestore?: () => void;
   onOpenOdekake?: () => void;
   onOpenZenGarden?: () => void;
+  onCycleSeason?: () => void;
+  currentSeason?: string;
 }
 
 export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
@@ -42,6 +44,8 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
   onOpenBackupRestore,
   onOpenOdekake,
   onOpenZenGarden,
+  onCycleSeason,
+  currentSeason = 'spring',
 }) => {
   if (!isOpen) return null;
 
@@ -103,6 +107,21 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
         onClose();
         if (onOpenBackupRestore) {
           onOpenBackupRestore();
+        }
+      },
+    },
+    {
+      id: 'season-cycle',
+      title: 'Empat Musim Alam (Shiki)',
+      kanji: '四季巡',
+      desc: `Musim aktif: ${currentSeason === 'spring' ? '🌸 Haru (Semi)' : currentSeason === 'summer' ? '🏮 Natsu (Panas)' : currentSeason === 'autumn' ? '🍁 Aki (Gugur)' : '❄️ Fuyu (Dingin)'}. Putar siklus musim dan hembuskan suasana alam baru.`,
+      icon: currentSeason === 'spring' ? '🌸' : currentSeason === 'summer' ? '🏮' : currentSeason === 'autumn' ? '🍁' : '❄️',
+      border: 'border-pink-500/80',
+      badge: 'Musim',
+      action: () => {
+        onClose();
+        if (onCycleSeason) {
+          onCycleSeason();
         }
       },
     },
