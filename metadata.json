@@ -1,0 +1,6 @@
+{
+  "name": "HAGUMI: Virtual Pet Kitsune",
+  "description": "Nurture, feed, and evolve a mystical spirit fox (Kitsune) in a cozy traditional Japanese tatami sanctuary with mini-games, branching evolutions, and companion dialogue.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
