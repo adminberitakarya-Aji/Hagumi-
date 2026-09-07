@@ -177,6 +177,14 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     const interval = setInterval(updateDayPhase, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Sinkronisasi musik latar Zen (BGM) dengan fase waktu hari & musim aktif
+  useEffect(() => {
+    if (soundEngine.isBGMActive()) {
+      soundEngine.updateBGMConfig(timePhase, season);
+    }
+  }, [timePhase, season]);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const elementInfo = ELEMENTS_CONFIG[pet.element] || ELEMENTS_CONFIG.fire;
@@ -1031,28 +1039,47 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               {/* Music BGM Toggle */}
               <button
                 onClick={() => {
-                  const active = soundEngine.toggleAmbientBGM();
+                  const active = soundEngine.toggleAmbientBGM(timePhase, season);
                   setIsBgmActive(active);
+                  const seasonNames: Record<SeasonType, string> = {
+                    spring: '🌸 Musim Semi (Haru)',
+                    summer: '🍃 Musim Panas (Natsu)',
+                    autumn: '🍁 Musim Gugur (Aki)',
+                    winter: '❄️ Musim Dingin (Fuyu)',
+                  };
+                  const phaseNames: Record<DayPhase, string> = {
+                    morning: '🌅 Fajar',
+                    noon: '☀️ Siang',
+                    evening: '🌇 Senja',
+                    night: '🌙 Malam',
+                  };
                   if (active) {
-                    showToast('🎵 Musik Tradisional Kuil Inari (Shakuhachi & Koto) Aktif');
+                    showToast(`🎵 Musik Zen (Koto & Shakuhachi) Aktif: ${seasonNames[season]} • ${phaseNames[timePhase]}`);
                   } else {
-                    showToast('🔇 Musik Tradisional Dijeda');
+                    showToast('🔇 Musik Zen Santuari Dijeda');
                   }
                 }}
-                title={isBgmActive ? 'Jeda Musik Kuil' : 'Putar Musik Tradisional Kuil Inari'}
-                className={`p-1 sm:p-1.5 rounded-lg transition-all cursor-pointer ${
+                title={
                   isBgmActive
-                    ? 'bg-amber-600/40 text-amber-300 shadow-[0_0_6px_rgba(251,191,36,0.4)]'
+                    ? `Jeda Musik Zen (${season} • ${timePhase})`
+                    : 'Putar Musik Zen Kuil Inari (Koto & Shakuhachi)'
+                }
+                className={`relative p-1 sm:p-1.5 rounded-lg transition-all cursor-pointer ${
+                  isBgmActive
+                    ? 'bg-amber-600/40 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.4)]'
                     : 'text-stone-400 hover:text-stone-200'
                 }`}
               >
                 <span className="text-xs">🎵</span>
+                {isBgmActive && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                )}
               </button>
 
-              {/* Time Phase Indicator - Desktop Only */}
+              {/* Time Phase Indicator */}
               <div
-                title="Fase Waktu Hari"
-                className="hidden sm:inline-block px-1 text-[10px] text-stone-300 font-medium"
+                title={`Fase Waktu: ${timePhase === 'morning' ? 'Pagi (朝)' : timePhase === 'noon' ? 'Siang (昼)' : timePhase === 'evening' ? 'Senja (夕)' : 'Malam (夜)'}`}
+                className="px-1 text-[10px] text-stone-300 font-medium select-none"
               >
                 {timePhase === 'morning' && '🌅'}
                 {timePhase === 'noon' && '☀️'}
@@ -1060,13 +1087,16 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                 {timePhase === 'night' && '🌙'}
               </div>
 
-              {/* Sound Mute Toggle - Desktop Only */}
+              {/* Sound Mute Toggle */}
               <button
                 onClick={() => {
                   const muted = soundEngine.toggleMute();
                   setIsMuted(muted);
+                  showToast(muted ? '🔇 Seluruh Audio Santuari Dibisukan' : '🔊 Audio Santuari Aktif');
                 }}
-                className="hidden sm:inline-flex p-1 sm:p-1.5 rounded-lg text-stone-400 hover:text-stone-200 transition-all cursor-pointer"
+                className={`p-1 sm:p-1.5 rounded-lg transition-all cursor-pointer ${
+                  isMuted ? 'text-red-400 hover:text-red-300' : 'text-stone-400 hover:text-stone-200'
+                }`}
                 title={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
               >
                 {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
