@@ -10,6 +10,7 @@ import {
   BookMarked,
   Gift,
   Heart,
+  Download,
 } from 'lucide-react';
 import { PetData, ShrinePassData } from '../types/game';
 import {
@@ -18,6 +19,8 @@ import {
   ELEMENTS_CONFIG,
 } from '../data/gameConfig';
 import { soundEngine } from '../utils/soundEngine';
+import { hapticEngine } from '../utils/hapticFeedback';
+import { generateShrinePassportPng } from '../utils/shrinePassportCanvas';
 
 interface ShrinePassModalProps {
   isOpen: boolean;
@@ -48,11 +51,38 @@ export const ShrinePassModal: React.FC<ShrinePassModalProps> = ({
   const myShrineCode = generateShrineCode(pet.name, pet.element, pet.level, pet.tailCount);
   const elementConfig = ELEMENTS_CONFIG[pet.element];
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(myShrineCode);
     setCopied(true);
     soundEngine.playChime();
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadPassport = () => {
+    soundEngine.playSuzuChime();
+    hapticEngine.medium();
+    setIsDownloading(true);
+
+    try {
+      const dataUrl = generateShrinePassportPng(pet, myShrineCode, elementConfig);
+      if (!dataUrl) return;
+
+      const link = document.createElement('a');
+      link.download = `Hagumi_Paspor_Kuil_${pet.name}_${myShrineCode}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      soundEngine.playEvolutionFanfare();
+      hapticEngine.evolution();
+    } catch (e) {
+      console.error('Failed to export passport PNG:', e);
+    } finally {
+      setTimeout(() => setIsDownloading(false), 1200);
+    }
   };
 
   const handleSearchCode = (e: React.FormEvent) => {
@@ -245,22 +275,34 @@ export const ShrinePassModal: React.FC<ShrinePassModalProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={handleCopyCode}
-                  className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-700 to-amber-700 hover:brightness-110 text-white font-bold text-xs shadow cursor-pointer transition-all"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-300" />
-                      <span>Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Salin Kode</span>
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={handleCopyCode}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 hover:border-amber-600/70 text-amber-200 font-bold text-xs shadow cursor-pointer transition-all"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Salin Kode</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleDownloadPassport}
+                    disabled={isDownloading}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-700 via-rose-700 to-amber-700 hover:brightness-110 active:scale-95 text-white font-extrabold text-xs shadow-md cursor-pointer transition-all disabled:opacity-50"
+                    title="Unduh Kartu Paspor Ziarah Tradisional (.PNG) beresolusi tinggi"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isDownloading ? 'Mencetak...' : 'Unduh Paspor (.PNG)'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
