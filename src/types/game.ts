@@ -113,6 +113,10 @@ export interface PetData {
   bondingPoints?: number;
   bondingLevel?: number;
   bondingTitle?: string;
+  activeOdekake?: OdekakeTrip;
+  completedOdekakes?: number;
+  unlockedPostcards?: string[];
+  unlockedSeeds?: string[];
 }
 
 export type WishCategory = 'health' | 'fortune' | 'bonding' | 'wisdom' | 'peace';
@@ -240,3 +244,59 @@ export interface IdleThought {
   bubbleColor: string; // Warna latar bubble
   accentColor: string; // Warna border/tail bubble
 }
+
+// --- FASE 2.1: PETUALANGAN BERKELANA ROH (KITSUNE O-DEKAKE / TABI) ---
+export interface OdekakeTrip {
+  id: string;
+  destinationId: string;
+  destinationName: string;
+  destinationKanji: string;
+  destinationRegion: string;
+  startedAt: number;        // ms timestamp
+  durationMs: number;       // total durasi ms
+  bentoName: string;
+  bentoEmoji: string;
+  omamoriName: string;
+  omamoriEmoji: string;
+  gearName: string;
+  gearEmoji: string;
+  isQuickMode?: boolean;    // true jika perjalanan kilat roh (demo / fast)
+  reward: OdekakeReward;
+}
+
+export interface OdekakeReward {
+  coins: number;
+  exp: number;
+  bondingPoints: number;
+  postcardId: string;
+  postcardTitle: string;
+  postcardKanji: string;
+  postcardDesc: string;
+  postcardStory: string;
+  seedName?: string;
+  seedKanji?: string;
+  seedDesc?: string;
+}
+
+export interface OdekakeDestination {
+  id: string;
+  name: string;
+  kanji: string;
+  region: string;
+  description: string;
+  distanceKm: number;
+  baseDurationMinutes: number; // e.g. 15, 30, 45, 60, 90, 120
+  minLevel: number;
+  badge: string;
+  accentColor: string;
+  bgGradient: string;
+  postcardTitle: string;
+  postcardKanji: string;
+  postcardStory: string;
+  seed: {
+    name: string;
+    kanji: string;
+    desc: string;
+  };
+}
+

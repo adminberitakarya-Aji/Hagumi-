@@ -18,7 +18,7 @@ import {
   Trash2,
   Flame,
 } from 'lucide-react';
-import { PetData, DayPhase, FoodItem, SeasonType } from '../types/game';
+import { PetData, DayPhase, FoodItem, SeasonType, OdekakeTrip, OdekakeReward } from '../types/game';
 import { ELEMENTS_CONFIG, getRequiredExp, addPetExp, getBondingLevelInfo } from '../data/gameConfig';
 import { KitsuneCanvas } from './KitsuneCanvas';
 import { BentoFoodModal } from './BentoFoodModal';
@@ -35,6 +35,8 @@ import { ShrinePassModal } from './ShrinePassModal';
 import { HanabiMakerModal } from './HanabiMakerModal';
 import { SanctuaryMenuModal } from './SanctuaryMenuModal';
 import { BackupRestoreModal } from './BackupRestoreModal';
+import { OdekakeModal } from './OdekakeModal';
+import { OdekakeReturnModal } from './OdekakeReturnModal';
 import { TatamiSanctuaryBackground } from './TatamiSanctuaryBackground';
 import { ShojiTransition } from './ShojiTransition';
 import { useShojiTransition } from '../hooks/useShojiTransition';
@@ -82,6 +84,12 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   const [isSanctuaryMenuOpen, setIsSanctuaryMenuOpen] = useState(false);
   const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
   const [isSleepConfirmOpen, setIsSleepConfirmOpen] = useState(false);
+  const [isOdekakeOpen, setIsOdekakeOpen] = useState(false);
+  const [completedTripToCelebrate, setCompletedTripToCelebrate] = useState<{
+    destinationName: string;
+    destinationKanji: string;
+    reward: OdekakeReward;
+  } | null>(null);
 
   // Sleep 15-minute countdown tracker
   const [sleepRemainingSeconds, setSleepRemainingSeconds] = useState<number>(() => {
@@ -90,6 +98,52 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     }
     return 0;
   });
+
+  // Odekake live countdown & completion check
+  const [odekakeRemainingSeconds, setOdekakeRemainingSeconds] = useState<number>(() => {
+    if (pet.activeOdekake) {
+      const finishTime = pet.activeOdekake.startedAt + pet.activeOdekake.durationMs;
+      return Math.max(0, Math.ceil((finishTime - Date.now()) / 1000));
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (!pet.activeOdekake) {
+      setOdekakeRemainingSeconds(0);
+      return;
+    }
+
+    const checkOdekake = () => {
+      if (pet.activeOdekake) {
+        const finishTime = pet.activeOdekake.startedAt + pet.activeOdekake.durationMs;
+        const diff = Math.max(0, Math.ceil((finishTime - Date.now()) / 1000));
+        setOdekakeRemainingSeconds(diff);
+
+        // Jika durasi sudah habis, selesaikan perjalanan dan sambut kepulangan Kitsune!
+        if (diff <= 0 && !completedTripToCelebrate) {
+          const finishedTrip = pet.activeOdekake;
+          soundEngine.playOdekakeReturn();
+          hapticEngine.evolution();
+          setCompletedTripToCelebrate({
+            destinationName: finishedTrip.destinationName,
+            destinationKanji: finishedTrip.destinationKanji,
+            reward: finishedTrip.reward,
+          });
+        }
+      }
+    };
+
+    checkOdekake();
+    const timer = setInterval(checkOdekake, 1000);
+    return () => clearInterval(timer);
+  }, [pet.activeOdekake, completedTripToCelebrate]);
+
+  const formatOdekakeCountdown = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (!pet.isSleeping || !pet.sleepUntilTimestamp) {
@@ -560,6 +614,92 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     showToast(`Shhh... ${pet.name} sedang tidur lelap (Zzz...). Menu ${activityName} istirahat sejenak hingga bangun.`);
   };
 
+  // Helper when clicking blocked activities while on Odekake journey
+  const handleOdekakeActivityBlocked = (activityName: string) => {
+    soundEngine.playFoxChirp();
+    hapticEngine.softTap();
+    showToast(`🎒 ${pet.name} sedang berkelana di ${pet.activeOdekake?.destinationName}... Menu ${activityName} menunggu hingga Kitsune kembali!`);
+  };
+
+  // Depart on Odekake journey
+  const handleDepartOdekake = (trip: OdekakeTrip, totalCost: number) => {
+    setPet((prev) => ({
+      ...prev,
+      coins: Math.max(0, prev.coins - totalCost),
+      activeOdekake: trip,
+      lastInteractionTime: Date.now(),
+    }));
+  };
+
+  // Early recall from Odekake (Kitsunebi return)
+  const handleRecallEarlyOdekake = () => {
+    if (!pet.activeOdekake) return;
+    const partialCoins = Math.max(10, Math.round(pet.activeOdekake.reward.coins * 0.5));
+    const partialExp = Math.max(10, Math.round(pet.activeOdekake.reward.exp * 0.5));
+    const expRes = addPetExp(pet.exp, pet.level, partialExp);
+
+    setPet((prev) => {
+      const res = addPetExp(prev.exp, prev.level, partialExp);
+      return {
+        ...prev,
+        coins: prev.coins + partialCoins,
+        exp: res.newExp,
+        level: res.newLevel,
+        activeOdekake: undefined,
+        completedOdekakes: (prev.completedOdekakes || 0) + 1,
+        lastInteractionTime: Date.now(),
+      };
+    });
+
+    setIsOdekakeOpen(false);
+    showToast(`✨ Kitsunebi Return! ${pet.name} kembali pulang membawa ${partialCoins} Ryo & ${partialExp} EXP!`);
+  };
+
+  // Claim Completed Odekake Reward
+  const handleClaimOdekakeReward = () => {
+    if (!completedTripToCelebrate) return;
+    const { reward } = completedTripToCelebrate;
+    const expRes = addPetExp(pet.exp, pet.level, reward.exp);
+
+    setPet((prev) => {
+      const res = addPetExp(prev.exp, prev.level, reward.exp);
+      const updatedPostcards = [...(prev.unlockedPostcards || [])];
+      if (reward.postcardId && !updatedPostcards.includes(reward.postcardId)) {
+        updatedPostcards.push(reward.postcardId);
+      }
+
+      const updatedSeeds = [...(prev.unlockedSeeds || [])];
+      if (reward.seedName && !updatedSeeds.includes(reward.seedName)) {
+        updatedSeeds.push(reward.seedName);
+      }
+
+      return {
+        ...prev,
+        coins: prev.coins + reward.coins,
+        exp: res.newExp,
+        level: res.newLevel,
+        bondingPoints: (prev.bondingPoints || 0) + reward.bondingPoints,
+        activeOdekake: undefined,
+        completedOdekakes: (prev.completedOdekakes || 0) + 1,
+        unlockedPostcards: updatedPostcards,
+        unlockedSeeds: updatedSeeds,
+        stats: {
+          ...prev.stats,
+          happiness: Math.min(100, prev.stats.happiness + 20),
+        },
+        lastInteractionTime: Date.now(),
+      };
+    });
+
+    setCompletedTripToCelebrate(null);
+    if (expRes.leveledUp) {
+      soundEngine.playEvolutionFanfare();
+      showToast(`🎉 Level Up! Oleh-oleh perjalanan membuat ${pet.name} naik ke Level ${expRes.newLevel}!`);
+    } else {
+      showToast(`🎴 Oleh-oleh berhasil disimpan ke Album! +${reward.coins} Ryo, +${reward.exp} EXP & +${reward.bondingPoints} Kizuna!`);
+    }
+  };
+
   // Confirm Sleep for 15 minutes & automatically open Bedroom Scene
   const handleConfirmSleep = () => {
     setIsSleepConfirmOpen(false);
@@ -766,16 +906,24 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   const sensuItems: SensuItem[] = [
     {
       id: 'bento',
-      label: pet.isSleeping ? 'Makan 💤' : 'Makan',
+      label: pet.isSleeping ? 'Makan 💤' : pet.activeOdekake ? 'Makan 🎒' : 'Makan',
       kanji: '🍱 食',
-      sublabel: pet.isSleeping ? 'Istirahat tidur... Menu terkunci sejenak' : 'Kotak Bento Jubako & Kuliner',
+      sublabel: pet.isSleeping
+        ? 'Istirahat tidur... Menu terkunci sejenak'
+        : pet.activeOdekake
+        ? `Sedang berkelana di ${pet.activeOdekake.destinationName}...`
+        : 'Kotak Bento Jubako & Kuliner',
       icon: '🍙',
-      color: pet.isSleeping ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#3a281e] to-[#251811]',
-      border: pet.isSleeping ? 'border-stone-700/50' : 'border-amber-600/80',
-      badge: !pet.isSleeping && pet.stats.hunger < 30 ? 'Lapar' : undefined,
+      color: pet.isSleeping || pet.activeOdekake ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#3a281e] to-[#251811]',
+      border: pet.isSleeping || pet.activeOdekake ? 'border-stone-700/50' : 'border-amber-600/80',
+      badge: !pet.isSleeping && !pet.activeOdekake && pet.stats.hunger < 30 ? 'Lapar' : undefined,
       onClick: () => {
         if (pet.isSleeping) {
           handleSleepingActivityBlocked('Makan');
+          return;
+        }
+        if (pet.activeOdekake) {
+          handleOdekakeActivityBlocked('Makan');
           return;
         }
         triggerShoji({
@@ -788,16 +936,24 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     },
     {
       id: 'clean',
-      label: pet.isSleeping ? 'Mandi 💤' : 'Mandi',
+      label: pet.isSleeping ? 'Mandi 💤' : pet.activeOdekake ? 'Mandi 🎒' : 'Mandi',
       kanji: '🛁 湯',
-      sublabel: pet.isSleeping ? 'Istirahat tidur... Menu terkunci sejenak' : 'Pemandian Onsen Hinoki & Busa',
+      sublabel: pet.isSleeping
+        ? 'Istirahat tidur... Menu terkunci sejenak'
+        : pet.activeOdekake
+        ? `Sedang berkelana di ${pet.activeOdekake.destinationName}...`
+        : 'Pemandian Onsen Hinoki & Busa',
       icon: '🛁',
-      color: pet.isSleeping ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#1e2e38] to-[#121c22]',
-      border: pet.isSleeping ? 'border-stone-700/50' : 'border-cyan-600/80',
-      badge: !pet.isSleeping && pet.poopCount > 0 ? `${pet.poopCount}` : undefined,
+      color: pet.isSleeping || pet.activeOdekake ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#1e2e38] to-[#121c22]',
+      border: pet.isSleeping || pet.activeOdekake ? 'border-stone-700/50' : 'border-cyan-600/80',
+      badge: !pet.isSleeping && !pet.activeOdekake && pet.poopCount > 0 ? `${pet.poopCount}` : undefined,
       onClick: () => {
         if (pet.isSleeping) {
           handleSleepingActivityBlocked('Mandi');
+          return;
+        }
+        if (pet.activeOdekake) {
+          handleOdekakeActivityBlocked('Mandi');
           return;
         }
         handleOpenBathScene();
@@ -805,13 +961,31 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     },
     {
       id: 'sleep',
-      label: pet.isSleeping ? `Tidur (${formatSleepCountdown(sleepRemainingSeconds)})` : 'Tidur',
+      label: pet.isSleeping ? `Tidur (${formatSleepCountdown(sleepRemainingSeconds)})` : pet.activeOdekake ? 'Tidur 🎒' : 'Tidur',
       kanji: pet.isSleeping ? '💤 眠' : '🛏️ 眠',
-      sublabel: pet.isSleeping ? `Tidur lelap (${formatSleepCountdown(sleepRemainingSeconds)} tersisa)` : 'Kamar Peraduan Futon (15 Menit)',
+      sublabel: pet.isSleeping
+        ? `Tidur lelap (${formatSleepCountdown(sleepRemainingSeconds)} tersisa)`
+        : pet.activeOdekake
+        ? `Sedang berkelana di ${pet.activeOdekake.destinationName}...`
+        : 'Kamar Peraduan Futon (15 Menit)',
       icon: pet.isSleeping ? '💤' : '🛏️',
-      color: pet.isSleeping ? 'from-[#381e4a] to-[#200f2e]' : 'from-[#3a281e] to-[#251811]',
-      border: pet.isSleeping ? 'border-purple-500/80 animate-pulse' : 'border-purple-600/80',
-      onClick: handleSleepButtonClick,
+      color: pet.isSleeping
+        ? 'from-[#381e4a] to-[#200f2e]'
+        : pet.activeOdekake
+        ? 'from-stone-900 to-stone-950 opacity-40'
+        : 'from-[#3a281e] to-[#251811]',
+      border: pet.isSleeping
+        ? 'border-purple-500/80 animate-pulse'
+        : pet.activeOdekake
+        ? 'border-stone-700/50'
+        : 'border-purple-600/80',
+      onClick: () => {
+        if (pet.activeOdekake) {
+          handleOdekakeActivityBlocked('Tidur');
+          return;
+        }
+        handleSleepButtonClick();
+      },
     },
     {
       id: 'wardrobe',
@@ -835,16 +1009,50 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       },
     },
     {
+      id: 'odekake',
+      label: pet.activeOdekake
+        ? `Tabi (${formatOdekakeCountdown(odekakeRemainingSeconds)})`
+        : 'Berkelana',
+      kanji: pet.activeOdekake ? '🚶 旅' : '🎒 旅',
+      sublabel: pet.activeOdekake
+        ? `Sedang ke ${pet.activeOdekake.destinationName} (${formatOdekakeCountdown(odekakeRemainingSeconds)})`
+        : 'Petualangan Berkelana Roh (O-dekake)',
+      icon: '🎒',
+      color: pet.activeOdekake
+        ? 'from-amber-900/90 to-amber-950'
+        : 'from-[#3a281e] to-[#251811]',
+      border: pet.activeOdekake
+        ? 'border-amber-400 animate-pulse'
+        : 'border-amber-500/80',
+      badge: pet.activeOdekake ? 'Aktif' : undefined,
+      onClick: () => {
+        triggerShoji({
+          label: 'Petualangan Berkelana Roh',
+          kanji: '🎒 旅',
+          sublabel: 'O-dekake • Kuil & Pegunungan Sakral',
+          onMidpoint: () => setIsOdekakeOpen(true),
+        });
+      },
+    },
+    {
       id: 'shrine',
-      label: pet.isSleeping ? 'Kuil 💤' : 'Kuil',
+      label: pet.isSleeping ? 'Kuil 💤' : pet.activeOdekake ? 'Kuil 🎒' : 'Kuil',
       kanji: '⛩️ 社',
-      sublabel: pet.isSleeping ? 'Istirahat tidur... Menu terkunci sejenak' : 'Fushimi Inari • Kotodama & Ema',
+      sublabel: pet.isSleeping
+        ? 'Istirahat tidur... Menu terkunci sejenak'
+        : pet.activeOdekake
+        ? `Sedang berkelana di ${pet.activeOdekake.destinationName}...`
+        : 'Fushimi Inari • Kotodama & Ema',
       icon: '⛩️',
-      color: pet.isSleeping ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#4a1b18] to-[#2b0e0c]',
-      border: pet.isSleeping ? 'border-stone-700/50' : 'border-rose-600/80',
+      color: pet.isSleeping || pet.activeOdekake ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#4a1b18] to-[#2b0e0c]',
+      border: pet.isSleeping || pet.activeOdekake ? 'border-stone-700/50' : 'border-rose-600/80',
       onClick: () => {
         if (pet.isSleeping) {
           handleSleepingActivityBlocked('Kuil Inari');
+          return;
+        }
+        if (pet.activeOdekake) {
+          handleOdekakeActivityBlocked('Kuil Inari');
           return;
         }
         triggerShoji({
@@ -857,15 +1065,23 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     },
     {
       id: 'matsuri',
-      label: pet.isSleeping ? 'Festival 💤' : 'Festival',
+      label: pet.isSleeping ? 'Festival 💤' : pet.activeOdekake ? 'Festival 🎒' : 'Festival',
       kanji: '🏮 祭',
-      sublabel: pet.isSleeping ? 'Istirahat tidur... Menu terkunci sejenak' : 'Natsu Matsuri • Taiko & Mini-Games',
+      sublabel: pet.isSleeping
+        ? 'Istirahat tidur... Menu terkunci sejenak'
+        : pet.activeOdekake
+        ? `Sedang berkelana di ${pet.activeOdekake.destinationName}...`
+        : 'Natsu Matsuri • Taiko & Mini-Games',
       icon: '🎏',
-      color: pet.isSleeping ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#3a281e] to-[#251811]',
-      border: pet.isSleeping ? 'border-stone-700/50' : 'border-amber-600/80',
+      color: pet.isSleeping || pet.activeOdekake ? 'from-stone-900 to-stone-950 opacity-40' : 'from-[#3a281e] to-[#251811]',
+      border: pet.isSleeping || pet.activeOdekake ? 'border-stone-700/50' : 'border-amber-600/80',
       onClick: () => {
         if (pet.isSleeping) {
           handleSleepingActivityBlocked('Festival Matsuri');
+          return;
+        }
+        if (pet.activeOdekake) {
+          handleOdekakeActivityBlocked('Festival Matsuri');
           return;
         }
         triggerShoji({
@@ -1118,6 +1334,31 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               </button>
             )}
 
+            {/* Quick Odekake / Tabi Berkelana Button */}
+            <button
+              onClick={() => {
+                soundEngine.playClick();
+                setIsOdekakeOpen(true);
+              }}
+              title={
+                pet.activeOdekake
+                  ? `Sedang Berkelana ke ${pet.activeOdekake.destinationName} (${formatOdekakeCountdown(odekakeRemainingSeconds)})`
+                  : 'Petualangan Berkelana Roh (O-dekake / Tabi)'
+              }
+              className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-[10px] sm:text-xs font-extrabold shadow-sm transition-all cursor-pointer flex-shrink-0 ${
+                pet.activeOdekake
+                  ? 'bg-gradient-to-r from-amber-700 to-amber-900 border-amber-400 text-amber-100 ring-1 ring-amber-400/60 animate-pulse'
+                  : 'bg-gradient-to-r from-[#3a2216] to-[#25150d] border-amber-600/80 text-amber-200 hover:brightness-110'
+              }`}
+            >
+              <span className="text-xs">{pet.activeOdekake ? '🚶' : '🎒'}</span>
+              <span className="font-bold hidden xs:inline">
+                {pet.activeOdekake
+                  ? `Tabi ${formatOdekakeCountdown(odekakeRemainingSeconds)}`
+                  : 'Berkelana'}
+              </span>
+            </button>
+
             {/* HUD Style Switcher (Sensu vs Classic Dock) - Desktop Only */}
             <button
               onClick={() => {
@@ -1348,6 +1589,35 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         </div>
       )}
 
+      {/* ODEKAKE TRAVEL STATUS BANNER */}
+      {pet.activeOdekake && (
+        <div className="relative z-20 max-w-2xl mx-auto w-full px-2 sm:px-3 mb-1 animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 via-[#26160e]/95 to-[#1c100a]/90 backdrop-blur-md border border-amber-500/70 text-amber-200 text-xs shadow-lg">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm animate-bounce">🎒</span>
+              <span className="text-[11px] sm:text-xs truncate">
+                <strong>{pet.name}</strong> berkelana ke {pet.activeOdekake.destinationName}:{' '}
+                <span className="font-mono font-bold text-amber-300 bg-amber-900/60 px-1.5 py-0.5 rounded border border-amber-400/40">
+                  ⏱️ {formatOdekakeCountdown(odekakeRemainingSeconds)}
+                </span>
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => {
+                  soundEngine.playClick();
+                  setIsOdekakeOpen(true);
+                }}
+                className="px-2.5 py-0.5 rounded-lg bg-amber-700/80 hover:bg-amber-600 text-white text-[10px] font-bold border border-amber-400/60 cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1"
+              >
+                <span>🧭</span>
+                <span>Periksa Tabi</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MAIN STAGE: Interactive Tatami Canvas & Room Fixtures */}
       <main
         onClick={handleTatamiClick}
@@ -1373,8 +1643,6 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             </div>
           </div>
         ))}
-
-
 
         {/* Kitsune Canvas Renderer (Midground subject layer) */}
         <div
@@ -1413,6 +1681,50 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <div className="mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-900/70 border border-purple-400/60 text-[10px] sm:text-xs font-bold text-purple-200 group-hover:bg-purple-800 transition-all shadow-md">
                 <span>Tengok ke Kamar</span>
                 <span className="text-amber-300 font-mono">⏱️ {formatSleepCountdown(sleepRemainingSeconds)}</span>
+              </div>
+            </div>
+          ) : pet.activeOdekake ? (
+            /* Saat Kitsune sedang berkelana (O-dekake): Catatan surat pamit di atas meja tatami */
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                soundEngine.playClick();
+                setIsOdekakeOpen(true);
+              }}
+              className="relative flex flex-col items-center justify-center p-4 sm:p-6 rounded-3xl bg-gradient-to-b from-[#2a1b12]/90 to-[#180f0a]/95 border-2 border-amber-500/70 backdrop-blur-md max-w-sm text-center cursor-pointer hover:border-amber-400 hover:bg-black/70 transition-all group shadow-2xl animate-in fade-in"
+              title="Klik untuk melihat kabar perjalanan Kitsune"
+            >
+              <div className="relative mb-2">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-amber-700/90 to-amber-950 border border-amber-400/80 flex items-center justify-center text-2xl sm:text-3xl shadow-[0_0_25px_rgba(245,158,11,0.35)] group-hover:scale-110 transition-transform">
+                  💌
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"></span>
+                </span>
+              </div>
+
+              <div>
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-600/50 text-[10px] text-amber-300 font-bold mb-1">
+                  <span>🎒</span>
+                  <span>Sedang Berkelana • お出かけ中</span>
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold text-amber-200 font-['Shippori_Mincho',serif]">
+                  {pet.name} sedang menjelajahi {pet.activeOdekake.destinationName}
+                </h3>
+                <p className="text-[10px] text-amber-400/80 font-mono mt-0.5">
+                  {pet.activeOdekake.destinationKanji} • {pet.activeOdekake.destinationRegion}
+                </p>
+                <p className="text-[11px] text-stone-300/85 mt-2 italic px-2.5 py-1.5 rounded-xl bg-black/40 border border-amber-900/40 leading-relaxed line-clamp-3">
+                  "{pet.activeOdekake.reward.postcardStory}"
+                </p>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-900/80 border border-amber-400/70 text-[10px] sm:text-xs font-bold text-amber-100 group-hover:bg-amber-800 transition-all shadow-md">
+                <span>Periksa Kabar Perjalanan</span>
+                <span className="text-amber-300 font-mono bg-black/50 px-1.5 py-0.5 rounded border border-amber-500/40">
+                  ⏱️ {formatOdekakeCountdown(odekakeRemainingSeconds)}
+                </span>
               </div>
             </div>
           ) : (
@@ -1890,7 +2202,33 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         onOpenBackupRestore={() => {
           setIsBackupRestoreOpen(true);
         }}
+        onOpenOdekake={() => {
+          setIsOdekakeOpen(true);
+        }}
       />
+
+      {/* Petualangan Berkelana Roh (O-dekake / Tabi) Modal */}
+      <OdekakeModal
+        isOpen={isOdekakeOpen}
+        onClose={() => setIsOdekakeOpen(false)}
+        pet={pet}
+        onDepart={handleDepartOdekake}
+        onRecallEarly={handleRecallEarlyOdekake}
+        showToast={showToast}
+      />
+
+      {/* Sambutan Kepulangan Berkelana (Odekake Return) Modal */}
+      {completedTripToCelebrate && (
+        <OdekakeReturnModal
+          isOpen={true}
+          onClose={handleClaimOdekakeReward}
+          petName={pet.name}
+          destinationName={completedTripToCelebrate.destinationName}
+          destinationKanji={completedTripToCelebrate.destinationKanji}
+          reward={completedTripToCelebrate.reward}
+          onClaim={handleClaimOdekakeReward}
+        />
+      )}
 
       {/* Cadangan & Pemulihan Santuari (Backup & Restore) Modal */}
       <BackupRestoreModal

@@ -1251,6 +1251,91 @@ class HagumiAudioEngine {
       chimeOsc.stop(t + 0.35);
     });
   }
+
+  // Petualangan Berkelana Roh (O-dekake Depart: Tabi Bell Chime & Semilir Angin Perjalanan)
+  public playOdekakeDepart() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // 1. Shinto Tabi Kagura Bell Triple Chimes (G5, B5, D6)
+    const bellNotes = [783.99, 987.77, 1174.66];
+    bellNotes.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      const t = now + idx * 0.12;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t);
+      osc.stop(t + 0.7);
+    });
+
+    // 2. Semilir Angin Perjalanan (Soft Wind Noise Sweep)
+    const noiseBuffer = this.createNoiseBuffer(0.7);
+    if (noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800, now);
+      filter.frequency.exponentialRampToValueAtTime(1600, now + 0.6);
+      filter.Q.setValueAtTime(2.5, now);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.08, now + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.7);
+    }
+  }
+
+  // Petualangan Berkelana Roh (O-dekake Return: Sambutan Meriah & Kagura Celebration)
+  public playOdekakeReturn() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // Ascending celebratory Inari Pentatonic Scale Fanfare (D5, F5, G5, A5, D6, F6)
+    const notes = [587.33, 698.46, 783.99, 880.0, 1174.66, 1396.91];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      const t = now + idx * 0.08;
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t);
+      osc.stop(t + 0.85);
+    });
+
+    // Deep cheering drum hit at the end
+    setTimeout(() => {
+      this.playTaikoDon();
+    }, 450);
+  }
+
   // Traditional Japanese Taiko Drum - DON (Center Skin Strike - Deep Boom)
   public playTaikoDon() {
     if (this.isMuted) return;

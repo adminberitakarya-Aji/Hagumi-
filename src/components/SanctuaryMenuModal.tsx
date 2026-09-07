@@ -20,6 +20,7 @@ interface SanctuaryMenuModalProps {
   onOpenShrine: () => void;
   onOpenPrologue?: () => void;
   onOpenBackupRestore?: () => void;
+  onOpenOdekake?: () => void;
 }
 
 export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
@@ -38,6 +39,7 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
   onOpenShrine,
   onOpenPrologue,
   onOpenBackupRestore,
+  onOpenOdekake,
 }) => {
   if (!isOpen) return null;
 
@@ -54,6 +56,21 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
         onClose();
         if (onOpenPrologue) {
           onOpenPrologue();
+        }
+      },
+    },
+    {
+      id: 'odekake',
+      title: 'Berkelana Roh (O-dekake / Tabi)',
+      kanji: '狐の旅',
+      desc: 'Kitsune menjelajahi lokasi suci (Arashiyama, Inari, Fuji) & membawa pulang kartu pos Ukiyo-e serta benih kuil.',
+      icon: '🎒',
+      border: 'border-amber-500/90',
+      badge: 'O-dekake',
+      action: () => {
+        onClose();
+        if (onOpenOdekake) {
+          onOpenOdekake();
         }
       },
     },
