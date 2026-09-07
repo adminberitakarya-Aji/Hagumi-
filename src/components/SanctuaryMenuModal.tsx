@@ -21,6 +21,7 @@ interface SanctuaryMenuModalProps {
   onOpenPrologue?: () => void;
   onOpenBackupRestore?: () => void;
   onOpenOdekake?: () => void;
+  onOpenZenGarden?: () => void;
 }
 
 export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
@@ -40,6 +41,7 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
   onOpenPrologue,
   onOpenBackupRestore,
   onOpenOdekake,
+  onOpenZenGarden,
 }) => {
   if (!isOpen) return null;
 
@@ -71,6 +73,21 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
         onClose();
         if (onOpenOdekake) {
           onOpenOdekake();
+        }
+      },
+    },
+    {
+      id: 'zen-garden',
+      title: 'Taman Zen & Kolam Koi',
+      kanji: '庭園と鯉',
+      desc: 'Area luar santuari: Beri pakan ikan Nishikigoi di kolam jernih & sisir pasir batu Karesansui (+Disiplin).',
+      icon: '🐟',
+      border: 'border-teal-500/90',
+      badge: 'Taman Zen',
+      action: () => {
+        onClose();
+        if (onOpenZenGarden) {
+          onOpenZenGarden();
         }
       },
     },

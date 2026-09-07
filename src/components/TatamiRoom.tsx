@@ -37,6 +37,7 @@ import { SanctuaryMenuModal } from './SanctuaryMenuModal';
 import { BackupRestoreModal } from './BackupRestoreModal';
 import { OdekakeModal } from './OdekakeModal';
 import { OdekakeReturnModal } from './OdekakeReturnModal';
+import { ZenGardenModal } from './ZenGardenModal';
 import { TatamiSanctuaryBackground } from './TatamiSanctuaryBackground';
 import { ShojiTransition } from './ShojiTransition';
 import { useShojiTransition } from '../hooks/useShojiTransition';
@@ -85,6 +86,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
   const [isSleepConfirmOpen, setIsSleepConfirmOpen] = useState(false);
   const [isOdekakeOpen, setIsOdekakeOpen] = useState(false);
+  const [isZenGardenOpen, setIsZenGardenOpen] = useState(false);
   const [completedTripToCelebrate, setCompletedTripToCelebrate] = useState<{
     destinationName: string;
     destinationKanji: string;
@@ -1359,6 +1361,19 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               </span>
             </button>
 
+            {/* Quick Taman Zen & Kolam Koi Button */}
+            <button
+              onClick={() => {
+                soundEngine.playClick();
+                setIsZenGardenOpen(true);
+              }}
+              title="Engawa & Taman Zen Santuari (Kolam Ikan Koi & Pasir Karesansui)"
+              className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-teal-950/90 to-emerald-950 border border-teal-500/80 text-teal-200 font-extrabold text-[10px] sm:text-xs shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0"
+            >
+              <span className="text-xs">🐟</span>
+              <span className="font-bold hidden xs:inline">Taman Zen</span>
+            </button>
+
             {/* HUD Style Switcher (Sensu vs Classic Dock) - Desktop Only */}
             <button
               onClick={() => {
@@ -2205,6 +2220,9 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         onOpenOdekake={() => {
           setIsOdekakeOpen(true);
         }}
+        onOpenZenGarden={() => {
+          setIsZenGardenOpen(true);
+        }}
       />
 
       {/* Petualangan Berkelana Roh (O-dekake / Tabi) Modal */}
@@ -2229,6 +2247,15 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           onClaim={handleClaimOdekakeReward}
         />
       )}
+
+      {/* Taman Zen & Kolam Ikan Koi (Engawa Karesansui) Modal */}
+      <ZenGardenModal
+        isOpen={isZenGardenOpen}
+        onClose={() => setIsZenGardenOpen(false)}
+        pet={pet}
+        setPet={setPet}
+        showToast={showToast}
+      />
 
       {/* Cadangan & Pemulihan Santuari (Backup & Restore) Modal */}
       <BackupRestoreModal

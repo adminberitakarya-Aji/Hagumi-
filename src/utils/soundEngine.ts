@@ -398,6 +398,84 @@ class HagumiAudioEngine {
     osc.stop(now + 0.08);
   }
 
+  // Percikan air lembut & pakan ikan Koi (Koi Feeding Plop & Ripple)
+  public playKoiFeeding() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // 1. Water drop plop (pitch bend up-then-down)
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.exponentialRampToValueAtTime(1180, now + 0.04);
+    osc.frequency.exponentialRampToValueAtTime(680, now + 0.12);
+
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+
+    // 2. Micro water ripples
+    const noiseBuffer = this.createNoiseBuffer(0.12);
+    if (noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1400, now + 0.02);
+      filter.Q.setValueAtTime(3.0, now + 0.02);
+
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(0.06, now + 0.02);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(this.ctx.destination);
+      noise.start(now + 0.02);
+      noise.stop(now + 0.13);
+    }
+  }
+
+  // Gesekan sapu pasir batu Zen Karesansui (Bamboo rake scraping sand)
+  public playSandRake() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const buffer = this.createNoiseBuffer(0.18);
+    if (!buffer) return;
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1800, now);
+    filter.frequency.linearRampToValueAtTime(1200, now + 0.16);
+    filter.Q.setValueAtTime(2.0, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    noise.start(now);
+    noise.stop(now + 0.19);
+  }
+
   // Alias for backward compatibility
   public playBath() {
     this.playSoapScrub();
