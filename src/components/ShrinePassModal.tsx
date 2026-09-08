@@ -135,7 +135,7 @@ export const ShrinePassModal: React.FC<ShrinePassModalProps> = ({
 
     soundEngine.playSuzuChime();
     setHasPrayedCurrent(true);
-    setVisitedShrines((prev) => [...prev, shrine.shrineCode]);
+    setVisitedShrines((prev) => (prev.includes(shrine.shrineCode) ? prev : [...prev, shrine.shrineCode]));
     onReceivePilgrimageBlessing(10, 45, shrine.offeringGift);
   };
 

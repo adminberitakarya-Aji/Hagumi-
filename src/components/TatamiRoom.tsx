@@ -2026,8 +2026,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         inventory={pet.inventory}
         onFeedItem={handleFeedItem}
         onOpenShop={() => setIsShopOpen(true)}
-        hunger={pet.hunger}
-        happiness={pet.happiness}
+        hunger={pet.stats.hunger}
+        happiness={pet.stats.happiness}
         petName={pet.name}
         coins={pet.coins}
         pet={pet}
@@ -2124,8 +2124,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         isOpen={isMemoryScrollOpen}
         onClose={() => setIsMemoryScrollOpen(false)}
         pet={pet}
-        onAddNote={handleAddDiaryNote}
-        onDeleteNote={handleDeleteDiaryNote}
+        onAddDiaryNote={handleAddDiaryNote}
+        onDeleteDiaryNote={handleDeleteDiaryNote}
       />
 
       {/* Paspor Kuil & Pertukaran Ziarah (Shrine Pass) Modal */}
@@ -2134,17 +2134,15 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         onClose={() => setIsShrinePassOpen(false)}
         pet={pet}
         visitedShrines={visitedShrines}
-        onVisitShrine={(code) => {
-          setVisitedShrines((prev) => (prev.includes(code) ? prev : [...prev, code]));
-        }}
-        onReceiveBlessing={handleReceivePilgrimageBlessing}
+        setVisitedShrines={setVisitedShrines}
+        onReceivePilgrimageBlessing={handleReceivePilgrimageBlessing}
       />
 
       {/* Pengrajin Kembang Api Tradisional (Hanabi Maker) Mini-Game Modal */}
       <HanabiMakerModal
         isOpen={isHanabiOpen}
         onClose={() => setIsHanabiOpen(false)}
-        onSuccess={handleHanabiSuccess}
+        onLaunchSuccess={handleHanabiSuccess}
       />
 
       {/* Pengaturan Umpan Balik Taktil (Haptic Feedback) Modal */}
