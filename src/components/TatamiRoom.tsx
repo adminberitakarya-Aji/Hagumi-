@@ -48,6 +48,14 @@ import { useAudioHaptic } from '../hooks/useAudioHaptic';
 import { useCountdown, formatCountdown } from '../hooks/useTimers';
 import { SensuFanHUD, SensuItem } from './SensuFanHUD';
 import { DialogA11yWrapper } from '../hooks/useDialogA11y';
+import { SleepConfirmDialog } from './tatami/SleepConfirmDialog';
+import { ResetConfirmDialog } from './tatami/ResetConfirmDialog';
+import { MODAL_LABELS, type ModalKind } from './tatami/modalRegistry';
+
+// Registry modal dipindah ke src/components/tatami/modalRegistry.ts —
+// re-export dipertahankan agar jalur import lama tetap berfungsi.
+export { MODAL_LABELS };
+export type { ModalKind };
 import { HapticSettingsModal } from './HapticSettingsModal';
 import { ParallaxSettingsModal } from './ParallaxSettingsModal';
 import { useParallax2D } from '../utils/useParallax2D';
@@ -63,48 +71,8 @@ interface TatamiRoomProps {
 }
 
 /** Semua jenis modal yang bisa dibuka di TatamiRoom (satu aktif pada satu waktu). */
-export type ModalKind =
-  | 'bedroom'
-  | 'bento'
-  | 'bath'
-  | 'shop'
-  | 'shrine'
-  | 'matsuri'
-  | 'hanko'
-  | 'wardrobe'
-  | 'decor'
-  | 'memoryScroll'
-  | 'shrinePass'
-  | 'hanabi'
-  | 'haptic'
-  | 'parallax'
-  | 'sanctuaryMenu'
-  | 'backupRestore'
-  | 'sleepConfirm'
-  | 'odekake'
-  | 'zenGarden';
 
 /** Label dialog yang ramah pembaca layar untuk setiap ModalKind. */
-export const MODAL_LABELS: Record<ModalKind, string> = {
-  bedroom: 'Kamar Peraduan Futon',
-  bento: 'Meja Makan Bento',
-  bath: 'Mandi Onsen',
-  shop: 'Toko Serba Ada Tanuki',
-  shrine: 'Kuil Inari',
-  matsuri: 'Festival Matsuri',
-  hanko: 'Album Cap Hanko',
-  wardrobe: 'Lemari Busana Kitsune Tansu',
-  decor: 'Dekorasi Santuari',
-  memoryScroll: 'Buku Harian Roh',
-  shrinePass: 'Paspor Ziarah Kuil',
-  hanabi: 'Pembuat Kembang Api Hanabi',
-  haptic: 'Pengaturan Getaran Haptic',
-  parallax: 'Pengaturan Parallax 2.5D',
-  sanctuaryMenu: 'Menu Fitur Santuari',
-  backupRestore: 'Cadangan & Pemulihan Santuari',
-  sleepConfirm: 'Konfirmasi Tidur 15 Menit',
-  odekake: 'Petualangan Berkelana Odekake',
-  zenGarden: 'Taman Zen & Kolam Koi Engawa',
 };
 
 export const TatamiRoom: React.FC<TatamiRoomProps> = ({
@@ -2300,133 +2268,21 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* DIALOG KONFIRMASI TIDUR 15 MENIT */}
       {activeModal === 'sleepConfirm' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/80 backdrop-blur-sm animate-in fade-in select-none">
-          <div className="relative max-w-md w-full rounded-2xl sm:rounded-3xl bg-stone-950/95 border-2 border-purple-500/70 p-5 sm:p-6 shadow-2xl space-y-4 text-stone-100">
-            {/* Header Dialog */}
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-700/80 to-purple-950 border border-purple-400/80 flex items-center justify-center text-2xl shadow-lg flex-shrink-0">
-                🌙
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold font-['Shippori_Mincho',serif] text-purple-200">
-                  Tidurkan {pet.name}?
-                </h3>
-                <p className="text-xs text-purple-300/80 font-['Shippori_Mincho',serif]">
-                  Peraduan Kasur Futon Hangat (15 Menit)
-                </p>
-              </div>
-            </div>
-
-            {/* Content & Details */}
-            <div className="rounded-xl bg-purple-950/40 border border-purple-500/30 p-3.5 space-y-2.5 text-xs text-stone-200 leading-relaxed">
-              <p>
-                Apakah kamu ingin menidurkan <strong>{pet.name}</strong> di atas kasur futon?
-              </p>
-              <div className="space-y-1.5 pt-1 text-[11px] text-stone-300">
-                <div className="flex items-center gap-2 text-purple-200 font-semibold">
-                  <span>⏱️</span>
-                  <span><strong>Durasi Tidur:</strong> 15 Menit waktu nyata</span>
-                </div>
-                <div className="flex items-center gap-2 text-emerald-300 font-semibold">
-                  <span>⚡</span>
-                  <span><strong>Pemulihan:</strong> Energi terisi penuh 100% saat bangun</span>
-                </div>
-                <div className="flex items-center gap-2 text-amber-200 font-semibold">
-                  <span>🏪</span>
-                  <span><strong>Toko Tanuki:</strong> Tetap BUKA & bisa kamu kunjungi untuk belanja!</span>
-                </div>
-                <div className="flex items-center gap-2 text-stone-400">
-                  <span>🔒</span>
-                  <span><strong>Menu Aktivitas Fisik:</strong> Makan, Mandi, Kuil, dan Festival diistirahatkan sejenak</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Confirmation Buttons */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                onClick={() => {
-                  soundEngine.playClick();
-                  setActiveModal(null);
-                }}
-                className="py-2.5 px-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-bold text-xs active:scale-95 transition-all cursor-pointer text-center"
-              >
-                Nanti Saja
-              </button>
-              <button
-                onClick={handleConfirmSleep}
-                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white font-extrabold text-xs shadow-lg shadow-purple-950/60 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer text-center"
-              >
-                <span>💤 Ya, Tidurkan (15 Menit)</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <SleepConfirmDialog
+          petName={pet.name}
+          onConfirm={handleConfirmSleep}
+          onCancel={() => setActiveModal(null)}
+        />
       )}
       </DialogA11yWrapper>
 
       {/* DIALOG KONFIRMASI MULAI GENERASI BARU (Reset Pet — destruktif permanen) */}
       {isResetConfirmOpen && (
-        <DialogA11yWrapper
-          isActive={true}
-          onClose={() => setIsResetConfirmOpen(false)}
-          label="Konfirmasi Mulai Generasi Baru"
-        >
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-rose-950/70 backdrop-blur-sm animate-in fade-in select-none">
-            <div className="relative max-w-md w-full rounded-2xl sm:rounded-3xl bg-stone-950/95 border-2 border-rose-500/80 p-5 sm:p-6 shadow-2xl space-y-4 text-stone-100">
-              {/* Header */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-800/80 to-stone-950 border border-rose-400/80 flex items-center justify-center text-2xl shadow-lg flex-shrink-0">
-                  🕊️
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold font-['Shippori_Mincho',serif] text-rose-200">
-                    Lepaskan {pet.name}?
-                  </h3>
-                  <p className="text-xs text-rose-300/80 font-['Shippori_Mincho',serif]">
-                    Upacara Perpisahan dari Kuil Inari
-                  </p>
-                </div>
-              </div>
-
-              {/* Peringatan konsekuensi */}
-              <div className="rounded-xl bg-rose-950/40 border border-rose-500/40 p-3.5 space-y-2 text-xs text-stone-200 leading-relaxed">
-                <p>
-                  <strong className="text-rose-300">Tindakan ini PERMANEN</strong> dan tidak dapat
-                  dibatalkan. Melepas Kitsune ke kuil agung berarti:
-                </p>
-                <ul className="space-y-1.5 text-[11px] text-stone-300 list-disc list-inside">
-                  <li>Semua progres, level & EXP <strong>{pet.name}</strong> dihapus</li>
-                  <li>Koin Ryo, koleksi & dekorasi santuari ikut hilang</li>
-                  <li>Permata roh Hōju baru akan lahir sebagai Kitsune generasi berikutnya</li>
-                </ul>
-                <p className="text-[11px] text-amber-300/90">
-                  💾 Ingin menyimpan kenangan dulu? Gunakan <strong>Backup Santuari</strong> di
-                  Menu Fitur sebelum melanjutkan.
-                </p>
-              </div>
-
-              {/* Tombol */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <button
-                  onClick={() => {
-                    soundEngine.playClick();
-                    setIsResetConfirmOpen(false);
-                  }}
-                  className="py-2.5 px-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-bold text-xs active:scale-95 transition-all cursor-pointer text-center"
-                >
-                  Batal, Tetap Rawat
-                </button>
-                <button
-                  onClick={handleConfirmReset}
-                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-700 to-rose-600 hover:from-rose-600 hover:to-rose-500 text-white font-extrabold text-xs shadow-lg shadow-rose-950/60 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer text-center"
-                >
-                  <span>🕊️ Ya, Lepaskan</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </DialogA11yWrapper>
+        <ResetConfirmDialog
+          petName={pet.name}
+          onConfirm={handleConfirmReset}
+          onCancel={() => setIsResetConfirmOpen(false)}
+        />
       )}
 
       {/* Traditional Shoji/Fusuma Sliding Door Screen Wipe Transition */}
