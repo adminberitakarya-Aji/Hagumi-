@@ -208,12 +208,18 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
       setTimeout(() => {
         soundEngine.playEvolutionFanfare();
       }, 300);
-      addBondingPoints(30, 'Menggantung Doa di Ema');
-      setIsWritingWish(false);
 
-      if (showToast) {
-        showToast(`🎋 Doa Ema berhasil digantung di Kuil Inari! (+30 Poin Ikatan)`);
+      if (data.rateLimited) {
+        if (showToast) {
+          showToast(`⏳ Doa tersimpan. ${data.message || 'Kitsune sedang jeda sejenak.'}`);
+        }
+      } else {
+        addBondingPoints(30, 'Menggantung Doa di Ema');
+        if (showToast) {
+          showToast(`🎋 Doa Ema berhasil digantung di Kuil Inari! (+30 Poin Ikatan)`);
+        }
       }
+      setIsWritingWish(false);
     } catch (err) {
       console.error(err);
       setIsWritingWish(false);

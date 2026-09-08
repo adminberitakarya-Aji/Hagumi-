@@ -1,18 +1,133 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import {
+  createRateLimiter,
+  createInstanceBudgetGuard,
+  createConcurrencyGuard,
+  parsePositiveIntEnv,
+  sanitizeInputString,
+} from './src/server/rateLimiter';
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '25mb' }));
+// Trust proxy for accurate client IP resolution behind Google Cloud Run / reverse proxies
+app.set('trust proxy', 1);
+
+// Tighten request payload limit to 1MB
+app.use(express.json({ limit: '1mb' }));
+
+// Global rate limiter for all Gemini AI endpoints (default: 45 req / 15 min per IP)
+// Env override: AI_RATE_GLOBAL_MAX
+const globalAiLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxRequests: parsePositiveIntEnv('AI_RATE_GLOBAL_MAX', 45),
+  endpointName: 'Kitsune AI API',
+  customFallback: (_req, retryAfter) => ({
+    error: 'Too Many Requests',
+    reply: `Kon kon! Energi spiritual kuil sedang memulihkan diri. Mohon tunggu sekitar ${retryAfter} detik sebelum berinteraksi kembali ya! ⛩️✨`,
+    rateLimited: true,
+    retryAfterSeconds: retryAfter,
+    fallback: true,
+  }),
+});
+
+// Instance-level COST CIRCUIT BREAKER (default: 500 total AI requests / hour per instance).
+// Plafon keras tagihan Gemini yang berlaku apa pun IP-nya — melindungi dari
+// rotasi IP/botnet dan pembagian kuota saat Cloud Run scale-out.
+// Env override: AI_HOURLY_INSTANCE_BUDGET
+const aiBudgetGuard = createInstanceBudgetGuard({
+  windowMs: 60 * 60 * 1000,
+  maxRequests: parsePositiveIntEnv('AI_HOURLY_INSTANCE_BUDGET', 500),
+  endpointName: 'Kitsune AI API',
+  onExceeded: (info) => {
+    console.warn(
+      `[AI BUDGET] Instance budget exhausted: ${info.totalRequests} AI requests in the last ${Math.round(info.windowMs / 60000)} minutes. Returning 429 for further AI requests.`
+    );
+  },
+  customFallback: (_req, retryAfter) => ({
+    error: 'Too Many Requests',
+    reply: `Kon kon! Energi spiritual kuil sedang memulihkan diri. Mohon tunggu sekitar ${retryAfter} detik sebelum berinteraksi kembali ya! ⛩️✨`,
+    rateLimited: true,
+    retryAfterSeconds: retryAfter,
+    fallback: true,
+  }),
+});
+
+// Concurrency guard (default: max 10 in-flight AI requests per instance).
+// Mencegah stampede ke Gemini API saat banyak klien menembak bersamaan.
+// Env override: AI_MAX_CONCURRENT_REQUESTS
+const aiConcurrencyGuard = createConcurrencyGuard({
+  maxConcurrent: parsePositiveIntEnv('AI_MAX_CONCURRENT_REQUESTS', 10),
+  endpointName: 'Kitsune AI API',
+});
+
+// Urutan middleware di /api/kitsune (murah -> mahal):
+// 1. Concurrency guard (cek counter sederhana)
+// 2. Budget guard per instance (plafon biaya absolut)
+// 3. Rate limiter global per-IP
+// 4. Rate limiter spesifik per endpoint (terpasang di masing-masing route)
+app.use('/api/kitsune', aiConcurrencyGuard, aiBudgetGuard, globalAiLimiter);
+
+// 1. Companion Chat Rate Limiter (default: 15 req / 1 min per IP)
+// Env override: AI_RATE_CHAT_MAX
+const chatLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: parsePositiveIntEnv('AI_RATE_CHAT_MAX', 15),
+  endpointName: 'Chat Kitsune',
+  customFallback: (req, retryAfter) => {
+    const caretaker = sanitizeInputString(req.body?.pet?.caretakerName, 50, 'Pengasuh');
+    return {
+      reply: `Kon kon, ${caretaker}! Rubah kecilmu kelelahan berbicara terlalu cepat... Istirahat sejenak dan mari menyeduh teh hangat bersama ya! (Tunggu ${retryAfter} detik) 🍵✨`,
+      rateLimited: true,
+      retryAfterSeconds: retryAfter,
+      fallback: true,
+    };
+  },
+});
+
+// 2. Ema Prayer Blessing Rate Limiter (default: 8 req / 5 min per IP)
+// Env override: AI_RATE_EMA_MAX
+const emaLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  maxRequests: parsePositiveIntEnv('AI_RATE_EMA_MAX', 8),
+  endpointName: 'Pemberkatan Ema',
+  customFallback: (req, retryAfter) => {
+    const caretaker = sanitizeInputString(req.body?.caretakerName, 50, 'Pengasuh');
+    return {
+      blessing: `Kon kon, ${caretaker}! Doa sucimu telah harum di altar kuil Inari. Berikan jeda sejenak sebelum menggantung doa berikutnya ya! (Tunggu ${retryAfter} detik) 🎋✨`,
+      rateLimited: true,
+      retryAfterSeconds: retryAfter,
+      fallback: true,
+    };
+  },
+});
+
+// 3. Omikuji Fortune Slip Rate Limiter (default: 10 req / 10 min per IP)
+// Env override: AI_RATE_OMIKUJI_MAX
+const omikujiLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: parsePositiveIntEnv('AI_RATE_OMIKUJI_MAX', 10),
+  endpointName: 'Ramalan Omikuji',
+  customFallback: (_req, retryAfter) => ({
+    blessing: 'Suekichi (Berkah Kesabaran & Ketenangan)',
+    poem: 'Air jernih mengalir tenang di sela bebatuan,\nKetenangan sejati diraih dalam kesabaran.',
+    advice: `Silinder bambu omikuji perlu diistirahatkan sejenak. Berdoa lagi dalam ${retryAfter} detik ya.`,
+    luckyItem: 'Cangkir Teh Ocha Hijau Hangat',
+    rateLimited: true,
+    retryAfterSeconds: retryAfter,
+    fallback: true,
+  }),
+});
+
+// Ambil angka yang aman untuk interpolasi prompt: tolak tipe non-number / NaN / Infinity
+function sanitizeNumber(value: unknown, defaultValue: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : defaultValue;
+}
 
 // Lazy GoogleGenAI client
 let aiClient: GoogleGenAI | null = null;
@@ -44,39 +159,46 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // Hagumi Kitsune Companion Chat (M6 & M9)
-app.post('/api/kitsune/chat', async (req: Request, res: Response) => {
+app.post('/api/kitsune/chat', chatLimiter, async (req: Request, res: Response) => {
   try {
-    const {
-      message = '',
-      pet = {},
-      history = [],
-    } = req.body;
+    const rawMessage = req.body?.message;
+    const message = sanitizeInputString(rawMessage, 400);
 
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required (max 400 characters)' });
     }
+
+    const pet = req.body?.pet || {};
+    const history = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
 
     const ai = getGenAI();
 
-    const petName = pet.name || 'Hagumi';
-    const stage = pet.stage || 'anak';
-    const element = pet.element || 'fire';
-    const form = pet.form || 'kogitsune';
-    const hunger = pet.stats?.hunger ?? 80;
-    const energy = pet.stats?.energy ?? 80;
-    const happiness = pet.stats?.happiness ?? 80;
-    const discipline = pet.stats?.discipline ?? 50;
-    const careScore = pet.careScore ?? 75;
+    const petName = sanitizeInputString(pet.name, 50, 'Hagumi');
+    const stage = sanitizeInputString(pet.stage, 30, 'anak');
+    const element = sanitizeInputString(pet.element, 30, 'fire');
+    const form = sanitizeInputString(pet.form, 30, 'kogitsune');
+    const hunger = sanitizeNumber(pet.stats?.hunger, 80);
+    const energy = sanitizeNumber(pet.stats?.energy, 80);
+    const happiness = sanitizeNumber(pet.stats?.happiness, 80);
+    const discipline = sanitizeNumber(pet.stats?.discipline, 50);
+    const careScore = sanitizeNumber(pet.careScore, 75);
 
     // Contextual Memory additions
-    const caretakerName = pet.caretakerName || 'Pengasuh';
-    const favoriteFood = pet.favoriteFood || 'Aburaage (Tahu Goreng Gurih)';
-    const bondingLevel = pet.bondingLevel || 1;
-    const bondingTitle = pet.bondingTitle || 'Kenalan Kuil';
-    const season = pet.season || 'autumn';
+    const caretakerName = sanitizeInputString(pet.caretakerName, 50, 'Pengasuh');
+    const favoriteFood = sanitizeInputString(pet.favoriteFood, 100, 'Aburaage (Tahu Goreng Gurih)');
+    const bondingLevel = sanitizeNumber(pet.bondingLevel, 1);
+    const bondingTitle = sanitizeInputString(pet.bondingTitle, 50, 'Kenalan Kuil');
+    const season = sanitizeInputString(pet.season, 20, 'autumn');
     const shrineWishes = Array.isArray(pet.shrineWishes) ? pet.shrineWishes : [];
-    const activeWishTexts = shrineWishes.slice(0, 3).map((w: any) => `"${w.text}" (${w.category})`).join(', ');
-    const recentDiary = pet.recentDiaryNote ? `"${pet.recentDiaryNote}"` : 'Belum ada catatan';
+    // Batasi panjang tiap teks doa & kategori sebelum masuk prompt (anti pemborosan token & prompt injection)
+    const activeWishTexts = shrineWishes
+      .slice(0, 3)
+      .map((w: any) => `"${sanitizeInputString(w?.text, 120)}" (${sanitizeInputString(w?.category, 30)})`)
+      .filter((entry: string) => !entry.startsWith('""'))
+      .join(', ');
+    const recentDiary = pet.recentDiaryNote
+      ? `"${sanitizeInputString(pet.recentDiaryNote, 200)}"`
+      : 'Belum ada catatan';
 
     const seasonDescMap: Record<string, string> = {
       spring: 'Musim Semi (bunga sakura bermekaran)',
@@ -157,7 +279,7 @@ Directives:
     const caretaker = req.body?.pet?.caretakerName || 'Pengasuh';
     const favFood = req.body?.pet?.favoriteFood || 'tahu goreng aburaage';
     const wishes = req.body?.pet?.shrineWishes || [];
-    const firstWish = wishes.length > 0 ? wishes[0].text : null;
+    const firstWish = wishes.length > 0 ? sanitizeInputString(wishes[0]?.text, 30) : null;
 
     // Rich contextual offline fallbacks
     const fallbacks = [
@@ -174,9 +296,18 @@ Directives:
 });
 
 // Ema Prayer Blessing Endpoint (Kuil Inari)
-app.post('/api/kitsune/ema-blessing', async (req: Request, res: Response) => {
+app.post('/api/kitsune/ema-blessing', emaLimiter, async (req: Request, res: Response) => {
   try {
-    const { wish = '', category = 'bonding', petName = 'Hagumi', caretakerName = 'Pengasuh' } = req.body;
+    const rawWish = req.body?.wish;
+    const wish = sanitizeInputString(rawWish, 180);
+    const category = sanitizeInputString(req.body?.category, 30, 'bonding');
+    const petName = sanitizeInputString(req.body?.petName, 50, 'Hagumi');
+    const caretakerName = sanitizeInputString(req.body?.caretakerName, 50, 'Pengasuh');
+
+    if (!wish) {
+      return res.status(400).json({ error: 'Wish text is required (max 180 characters)' });
+    }
+
     const ai = getGenAI();
     const prompt = `A user named "${caretakerName}" hung a sacred prayer wish on the wooden Ema plaque at the Inari Kitsune shrine:
 Wish: "${wish}" (Category: ${category})
@@ -194,14 +325,14 @@ Generate a heartwarming, sacred, 1-2 sentence blessing in Indonesian from the ki
     const blessing = response.text?.trim() || `Kon kon, ${caretakerName}! Doa tulusmu telah sampai ke Altar Inari. Roh rubahku akan selalu menjaga harapan ini mekar indah! ✨`;
     res.json({ blessing });
   } catch (err) {
-    const caretaker = req.body?.caretakerName || 'Pengasuh';
+    const caretaker = sanitizeInputString(req.body?.caretakerName, 50, 'Pengasuh');
     const fallback = `Kon kon, ${caretaker}! Asap dupa suci mengantarkan doamu ke langit Inari. Aku berjanji akan melindungi harapan ini dengan segenap api rohku! 🎋✨`;
     res.json({ blessing: fallback, fallback: true });
   }
 });
 
 // Omikuji Divine Fortune Slip (Kuil Kitsune)
-app.post('/api/kitsune/omikuji', async (req: Request, res: Response) => {
+app.post('/api/kitsune/omikuji', omikujiLimiter, async (req: Request, res: Response) => {
   try {
     const ai = getGenAI();
     const prompt = `Generate a traditional Japanese shrine Omikuji fortune slip from the Inari Kitsune shrine.
