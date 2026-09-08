@@ -16,6 +16,8 @@ import {
   Utensils,
   ChevronRight,
   Sparkle,
+  Trees,
+  List,
 } from 'lucide-react';
 import { PetData, OmikujiResult, ShrineWish, WishCategory } from '../types/game';
 import {
@@ -25,6 +27,7 @@ import {
 } from '../data/gameConfig';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
+import EmaTreeCanvas from './EmaTreeCanvas';
 
 interface ShrineModalProps {
   isOpen: boolean;
@@ -54,6 +57,7 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
   const [wishText, setWishText] = useState('');
   const [wishCategory, setWishCategory] = useState<WishCategory>('bonding');
   const [isSubmittingWish, setIsSubmittingWish] = useState(false);
+  const [emaView, setEmaView] = useState<'tree' | 'list'>('tree');
 
   // Kizuna / Caretaker Profile State
   const [caretakerInput, setCaretakerInput] = useState(pet.caretakerName || 'Pengasuh');
@@ -186,6 +190,8 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
         date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
         fulfilled: false,
         kitsuneBlessing: blessingText,
+        authorName: pet.caretakerName || 'Pengasuh',
+        blessingBells: 1,
       };
 
       if (setPet) {
@@ -213,6 +219,33 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
       setIsWritingWish(false);
     } finally {
       setIsSubmittingWish(false);
+    }
+  };
+
+  // Ring Suzu Blessing Bell on any Ema plaque
+  const handleRingBell = (wishId: string) => {
+    soundEngine.playSuzuShrineBell();
+    setTimeout(() => soundEngine.playKashiwade(), 320);
+    hapticEngine.bell();
+    addBondingPoints(2, 'Lonceng Berkah Ema');
+
+    if (setPet) {
+      setPet((prev) => {
+        const currentList = (prev.shrineWishes && prev.shrineWishes.length > 0)
+          ? prev.shrineWishes
+          : DEFAULT_SHRINE_WISHES;
+        const updated = currentList.map((w) =>
+          w.id === wishId ? { ...w, blessingBells: (w.blessingBells ?? 0) + 1 } : w
+        );
+        return {
+          ...prev,
+          shrineWishes: updated,
+        };
+      });
+    }
+
+    if (showToast) {
+      showToast(`🔔 Lonceng Berkah Suzu berdentang! (+2 Poin Ikatan)`);
     }
   };
 
@@ -502,28 +535,51 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
           </div>
         )}
 
-        {/* TAB 2: PAPAN DOA KAYU EMA (絵馬) */}
+        {/* TAB 2: POHON DOA EMA (絵馬の木) */}
         {tab === 'ema' && (
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-2.5">
               <div>
                 <h4 className="text-xs sm:text-sm font-bold font-['Shippori_Mincho',serif] text-amber-200 flex items-center gap-1.5">
-                  <span>🎋 Papan Doa Kayu Ema (絵馬掛け)</span>
+                  <span>🌳 Pohon Doa Ema Virtual (絵馬の木)</span>
                 </h4>
                 <p className="text-[10px] sm:text-[11px] text-stone-400">
-                  Gantungkan harapanmu. {pet.name} akan selalu mengingat dan mendoakannya di altar.
+                  Gantungkan harapanmu. {pet.name} akan selalu mendoakannya di altar Inari.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  soundEngine.playClick();
-                  setIsWritingWish(!isWritingWish);
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-bold text-[11px] shadow-sm flex items-center gap-1 transition-all cursor-pointer"
-              >
-                {isWritingWish ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                <span>{isWritingWish ? 'Tutup' : 'Tulis Doa (+30 Poin)'}</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* View toggle */}
+                <div className="flex rounded-lg overflow-hidden border border-stone-700">
+                  <button
+                    onClick={() => { soundEngine.playClick(); setEmaView('tree'); }}
+                    className={`px-2 py-1.5 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                      emaView === 'tree' ? 'bg-amber-700 text-amber-100' : 'bg-stone-900 text-stone-400 hover:text-stone-200'
+                    }`}
+                  >
+                    <Trees className="w-3 h-3" />
+                    <span>Pohon</span>
+                  </button>
+                  <button
+                    onClick={() => { soundEngine.playClick(); setEmaView('list'); }}
+                    className={`px-2 py-1.5 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                      emaView === 'list' ? 'bg-amber-700 text-amber-100' : 'bg-stone-900 text-stone-400 hover:text-stone-200'
+                    }`}
+                  >
+                    <List className="w-3 h-3" />
+                    <span>Daftar</span>
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    soundEngine.playClick();
+                    setIsWritingWish(!isWritingWish);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-bold text-[11px] shadow-sm flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {isWritingWish ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>{isWritingWish ? 'Tutup' : 'Tulis Doa'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Wish Creation Form */}
@@ -594,7 +650,20 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
               </form>
             )}
 
-            {/* Ema Rack / Grid */}
+            {/* Tree View */}
+            {emaView === 'tree' && (
+              <div className="flex-1 overflow-y-auto">
+                <EmaTreeCanvas
+                  wishes={activeWishes}
+                  season={(pet.season as 'spring' | 'summer' | 'autumn' | 'winter') ?? 'autumn'}
+                  petName={pet.name}
+                  onRingBell={handleRingBell}
+                />
+              </div>
+            )}
+
+            {/* Ema List / Grid */}
+            {emaView === 'list' && (
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
               {activeWishes.map((w) => {
                 const catObj = wishCategories.find((c) => c.id === w.category);
@@ -632,10 +701,28 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Community Blessing Bell & Author */}
+                    <div className="mt-2.5 pt-2 border-t border-amber-800/20 flex items-center justify-between">
+                      <span className="text-[10px] text-stone-600 font-medium">
+                        Peziarah: {w.authorName || 'Peziarah Kuil'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRingBell(w.id)}
+                        className="px-2.5 py-1 rounded-xl bg-amber-600/90 hover:bg-amber-600 text-stone-950 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-xs"
+                        title="Bunyikan Lonceng Berkah Suzu"
+                      >
+                        <Bell className="w-3 h-3" />
+                        <span>Lonceng Berkah ({w.blessingBells ?? 0})</span>
+                        <span className="text-[9px] bg-black/20 text-amber-950 px-1 rounded-sm">+2 💖</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
+            )}
           </div>
         )}
 

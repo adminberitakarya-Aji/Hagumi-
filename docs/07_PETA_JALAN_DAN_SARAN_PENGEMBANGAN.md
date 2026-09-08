@@ -37,16 +37,17 @@ Berdasarkan audit arsitektur dan pengalaman pengguna (*UX/UI*):
 └── 💭 [x] Gelembung Pikiran Acak saat Santai (Idle Thought Emotes)
         │
         ▼
-[FASE 2: PENGAYAAN KEDALAMAN (MID-TERM)]
+[FASE 2: PENGAYAAN KEDALAMAN (MID-TERM)] - SELESAI ✅
 ├── 🎒 [x] Petualangan Berkelana Roh (Kitsune O-dekake / Tabi)
 ├── 🌿 [x] Perluasan Halaman Luar: Taman Kolam Koi & Pasir Zen
 ├── 🍂 [x] Sistem 4 Musim Dinamis & Partikel Atmosfer (Haru, Natsu, Aki, Fuyu)
-└── 🥁 [ ] Mini-Game Taiko Ritme Ketukan Interaktif (Don & Ka)
+└── 🥁 [x] Mini-Game Taiko Ritme Ketukan Interaktif (Don & Ka) - ada di Festival Matsuri
         │
         ▼
-[FASE 3: KOMUNITAS & MUSIMAN (LONG-TERM)]
-├── 📇 [ ] Kartu Paspor Ziarah Digital (Bisa Diunduh PNG / Dibagikan)
-└── 🏮 [ ] Pohon Doa Ema Virtual Bersama (Komunitas)
+[FASE 3: KOMUNITAS & MUSIMAN (LONG-TERM)] - SELESAI ✅
+├── 📇 [x] Kartu Paspor Ziarah Digital (Unduh PNG bergaya Ukiyo-e beresolusi tinggi)
+├── 🔊 [x] Suara Musim Sintetis + Auto-Deteksi dari Kalender Nyata
+└── 🏮 [x] Pohon Doa Ema Virtual Bersama (Komunitas) - SELESAI ✅
 ```
 
 ---

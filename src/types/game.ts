@@ -128,6 +128,8 @@ export interface ShrineWish {
   date: string;
   fulfilled?: boolean;
   kitsuneBlessing?: string;
+  blessingBells?: number; // Jumlah dentangan Lonceng Berkah dari sesama peziarah / pengasuh
+  authorName?: string;    // Nama peziarah atau pengasuh yang menggantungkan doa
 }
 
 export interface BondingMilestone {
