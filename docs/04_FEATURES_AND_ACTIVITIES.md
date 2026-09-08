@@ -27,7 +27,7 @@ Ruang santuari bertindak sebagai panggung utama kehidupan Kitsune:
 Kuil suci merupakan pusat penguatan spiritual Kitsune:
 - **Papan Doa Ema (絵馬)**:
   - Pemain dapat menuliskan resolusi, doa harian, atau ucapan syukur di atas lempengan kayu cedar yang kemudian digantungkan di tali suci Kuil Inari.
-  - Setiap doa yang dipanjatkan memberikan berkah +15 Spirit dan memperkuat ikatan batin.
+  - Setiap doa yang dipanjatkan memberikan berkah +5 Care Score (via `handleSaveEmaPrayer`) dan memperkuat ikatan batin.
 - **Pemberian Sesaji (Omiki & Aburaage)**:
   - Menaruh tahu goreng manis (*aburaage*) kesukaan Kitsune di altar Inari untuk melipatgandakan rezeki koin Ryo.
 - **Ramalan Suci Omikuji (おみくji)**:

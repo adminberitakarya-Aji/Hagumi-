@@ -29,7 +29,7 @@ Dokumen ini ditujukan bagi pengembang yang ingin memahami struktur basis kode, m
 │   │   ├── InariShrineModal.tsx        # Altar kuil Inari & sistem ikatan
 │   │   ├── WardrobeTansuModal.tsx      # Lemari busana yukata & aksesoris
 │   │   ├── SanctuaryShopModal.tsx      # Kedai saudagar Tanuki
-│   │   ├── SpiritDiaryModal.tsx        # Buku catatan harian Kitsune
+│   │   ├── MemoryScrollModal.tsx        # Buku catatan harian Kitsune (Memory Scroll / Album Ukiyo-e)
 │   │   └── games/                      # Seluruh modul mini-game festival Matsuri
 │   │       ├── TaikoRhythmGame.tsx     # Mini-game irama genderang Taiko
 │   │       ├── KingyoSukuiGame.tsx     # Mini-game tangguk ikan mas
