@@ -133,14 +133,9 @@ export const HankoAlbumModal: React.FC<HankoAlbumModalProps> = ({
         <div className="pt-4 flex items-center justify-between text-xs">
           <button
             onClick={() => {
-              if (
-                window.confirm(
-                  'Apakah kamu ingin melepas Kitsune ini ke kuil agung dan membangkitkan permata roh Hōju baru (Generasi berikutnya)?'
-                )
-              ) {
-                soundEngine.playShrineBell();
-                onResetPet();
-              }
+              // Konfirmasi ditangani dialog khusus di TatamiRoom (bukan window.confirm)
+              soundEngine.playClick();
+              onResetPet();
             }}
             className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 font-semibold cursor-pointer"
           >
