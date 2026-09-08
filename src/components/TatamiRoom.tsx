@@ -43,13 +43,16 @@ import { SeasonSwitcherPanel } from './SeasonSwitcherPanel';
 import { TatamiSanctuaryBackground } from './TatamiSanctuaryBackground';
 import { ShojiTransition } from './ShojiTransition';
 import { useShojiTransition } from '../hooks/useShojiTransition';
+import { useAmbient } from '../hooks/useAmbient';
+import { useAudioHaptic } from '../hooks/useAudioHaptic';
+import { useCountdown, formatCountdown } from '../hooks/useTimers';
 import { SensuFanHUD, SensuItem } from './SensuFanHUD';
 import { HapticSettingsModal } from './HapticSettingsModal';
 import { ParallaxSettingsModal } from './ParallaxSettingsModal';
 import { useParallax2D } from '../utils/useParallax2D';
 import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
-import { soundEngine, detectRealSeason } from '../utils/soundEngine';
-import { hapticEngine, HapticConfig } from '../utils/hapticFeedback';
+import { soundEngine } from '../utils/soundEngine';
+import { hapticEngine } from '../utils/hapticFeedback';
 
 interface TatamiRoomProps {
   pet: PetData;
@@ -106,163 +109,67 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     reward: OdekakeReward;
   } | null>(null);
 
-  // Sleep 15-minute countdown tracker
-  const [sleepRemainingSeconds, setSleepRemainingSeconds] = useState<number>(() => {
-    if (pet.isSleeping && pet.sleepUntilTimestamp) {
-      return Math.max(0, Math.ceil((pet.sleepUntilTimestamp - Date.now()) / 1000));
-    }
-    return 0;
-  });
+  // Sleep 15-minute countdown (target timestamp; null saat tidak tidur)
+  const sleepRemainingSeconds = useCountdown(
+    pet.isSleeping && pet.sleepUntilTimestamp ? pet.sleepUntilTimestamp : null
+  );
 
-  // Odekake live countdown & completion check
-  const [odekakeRemainingSeconds, setOdekakeRemainingSeconds] = useState<number>(() => {
-    if (pet.activeOdekake) {
-      const finishTime = pet.activeOdekake.startedAt + pet.activeOdekake.durationMs;
-      return Math.max(0, Math.ceil((finishTime - Date.now()) / 1000));
-    }
-    return 0;
-  });
+  // Odekake live countdown (target = startedAt + durationMs; null saat tidak berkelana)
+  const odekakeRemainingSeconds = useCountdown(
+    pet.activeOdekake ? pet.activeOdekake.startedAt + pet.activeOdekake.durationMs : null
+  );
 
+  // Jika durasi perjalanan sudah habis, selesaikan perjalanan dan sambut kepulangan Kitsune!
   useEffect(() => {
-    if (!pet.activeOdekake) {
-      setOdekakeRemainingSeconds(0);
-      return;
+    if (pet.activeOdekake && odekakeRemainingSeconds <= 0 && !completedTripToCelebrate) {
+      soundEngine.playOdekakeReturn();
+      hapticEngine.evolution();
+      setCompletedTripToCelebrate({
+        destinationName: pet.activeOdekake.destinationName,
+        destinationKanji: pet.activeOdekake.destinationKanji,
+        reward: pet.activeOdekake.reward,
+      });
     }
-
-    const checkOdekake = () => {
-      if (pet.activeOdekake) {
-        const finishTime = pet.activeOdekake.startedAt + pet.activeOdekake.durationMs;
-        const diff = Math.max(0, Math.ceil((finishTime - Date.now()) / 1000));
-        setOdekakeRemainingSeconds(diff);
-
-        // Jika durasi sudah habis, selesaikan perjalanan dan sambut kepulangan Kitsune!
-        if (diff <= 0 && !completedTripToCelebrate) {
-          const finishedTrip = pet.activeOdekake;
-          soundEngine.playOdekakeReturn();
-          hapticEngine.evolution();
-          setCompletedTripToCelebrate({
-            destinationName: finishedTrip.destinationName,
-            destinationKanji: finishedTrip.destinationKanji,
-            reward: finishedTrip.reward,
-          });
-        }
-      }
-    };
-
-    checkOdekake();
-    const timer = setInterval(checkOdekake, 1000);
-    return () => clearInterval(timer);
-  }, [pet.activeOdekake, completedTripToCelebrate]);
-
-  const formatOdekakeCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  useEffect(() => {
-    if (!pet.isSleeping || !pet.sleepUntilTimestamp) {
-      setSleepRemainingSeconds(0);
-      return;
-    }
-
-    const updateTimer = () => {
-      if (pet.sleepUntilTimestamp) {
-        const diff = Math.max(0, Math.ceil((pet.sleepUntilTimestamp - Date.now()) / 1000));
-        setSleepRemainingSeconds(diff);
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [pet.isSleeping, pet.sleepUntilTimestamp]);
-
-  const formatSleepCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  }, [pet.activeOdekake, odekakeRemainingSeconds, completedTripToCelebrate]);
 
   // Parallax 2.5D Depth Engine (Cursor and Gyroscope sensor tracking)
   const parallax = useParallax2D();
-
-  // Haptic feedback configuration state
-  const [hapticConfig, setHapticConfig] = useState<HapticConfig>(() => hapticEngine.getConfig());
-
-  useEffect(() => {
-    return hapticEngine.subscribe((newCfg) => setHapticConfig(newCfg));
-  }, []);
 
   // Sensu Folding Fan Radial HUD state (default to true dockMode so classic dock is always visible and clear)
   const [isSensuOpen, setIsSensuOpen] = useState(false);
   const [isDockMode, setIsDockMode] = useState(true);
 
-  // Tatami Interactive Ripple Clicks state
-  const [tatamiRipples, setTatamiRipples] = useState<
-    Array<{ id: number; x: number; y: number; symbol: string }>
-  >([]);
+  // Domain lingkungan/visual sanctuary: musim, fase waktu hari, lentera & riak tatami
+  const {
+    season,
+    setSeason,
+    isLanternOn,
+    setIsLanternOn,
+    timePhase,
+    tatamiRipples,
+    setTatamiRipples,
+  } = useAmbient(pet, setPet);
 
-  // Seasonal Weather state
-  const [season, setSeason] = useState<SeasonType>(() => {
-    if (pet.season) return pet.season;
-    return detectRealSeason();
-  });
+  // Domain audio & haptic: mute, BGM aktif & konfigurasi haptic feedback
+  const { isMuted, isBgmActive, hapticConfig, toggleMute, toggleBgm } = useAudioHaptic(timePhase, season);
 
   const [visitedShrines, setVisitedShrines] = useState<string[]>(() => pet.visitedShrines || []);
 
   // Room environment states
-  const [isLanternOn, setIsLanternOn] = useState(true);
   const [actionState, setActionState] = useState<'idle' | 'eating' | 'bathing' | 'sleeping' | 'happy' | 'sick'>('idle');
-  const [isMuted, setIsMuted] = useState(false);
-  const [isBgmActive, setIsBgmActive] = useState(false);
-  // Kesepakatan waktu: 06.00 - 17.59 = Day, 18.00 - 05.59 = Night
-  const [timePhase, setTimePhase] = useState<DayPhase>(() => {
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 18) {
-      if (hour < 11) return 'morning';
-      if (hour < 15) return 'noon';
-      return 'evening';
-    }
-    return 'night';
-  });
-
-  // Sinkronisasi otomatis jam lokal
-  useEffect(() => {
-    const updateDayPhase = () => {
-      const hour = new Date().getHours();
-      let nextPhase: DayPhase = 'night';
-      if (hour >= 6 && hour < 18) {
-        if (hour < 11) nextPhase = 'morning';
-        else if (hour < 15) nextPhase = 'noon';
-        else nextPhase = 'evening';
-      }
-      setTimePhase(nextPhase);
-    };
-    const interval = setInterval(updateDayPhase, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Sinkronisasi musik latar Zen (BGM) dengan fase waktu hari & musim aktif
-  useEffect(() => {
-    if (soundEngine.isBGMActive()) {
-      soundEngine.updateBGMConfig(timePhase, season);
-    }
-  }, [timePhase, season]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const elementInfo = ELEMENTS_CONFIG[pet.element] || ELEMENTS_CONFIG.fire;
   const bondInfo = getBondingLevelInfo(pet.bondingPoints ?? 120);
 
-  // Sync visited shrines to pet data
+  // Sync visited shrines to pet data (season sudah disinkronkan oleh useAmbient)
   useEffect(() => {
     setPet((prev) => ({
       ...prev,
       visitedShrines,
-      season,
     }));
-  }, [visitedShrines, season, setPet]);
+  }, [visitedShrines, setPet]);
 
   // Handler: Cycle through the 4 seasons with Shoji door wipe transition
   const handleCycleSeason = () => {
@@ -973,10 +880,10 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     },
     {
       id: 'sleep',
-      label: pet.isSleeping ? `Tidur (${formatSleepCountdown(sleepRemainingSeconds)})` : pet.activeOdekake ? 'Tidur 🎒' : 'Tidur',
+      label: pet.isSleeping ? `Tidur (${formatCountdown(sleepRemainingSeconds)})` : pet.activeOdekake ? 'Tidur 🎒' : 'Tidur',
       kanji: pet.isSleeping ? '💤 眠' : '🛏️ 眠',
       sublabel: pet.isSleeping
-        ? `Tidur lelap (${formatSleepCountdown(sleepRemainingSeconds)} tersisa)`
+        ? `Tidur lelap (${formatCountdown(sleepRemainingSeconds)} tersisa)`
         : pet.activeOdekake
         ? `Sedang berkelana di ${pet.activeOdekake.destinationName}...`
         : 'Kamar Peraduan Futon (15 Menit)',
@@ -1023,11 +930,11 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     {
       id: 'odekake',
       label: pet.activeOdekake
-        ? `Tabi (${formatOdekakeCountdown(odekakeRemainingSeconds)})`
+        ? `Tabi (${formatCountdown(odekakeRemainingSeconds)})`
         : 'Berkelana',
       kanji: pet.activeOdekake ? '🚶 旅' : '🎒 旅',
       sublabel: pet.activeOdekake
-        ? `Sedang ke ${pet.activeOdekake.destinationName} (${formatOdekakeCountdown(odekakeRemainingSeconds)})`
+        ? `Sedang ke ${pet.activeOdekake.destinationName} (${formatCountdown(odekakeRemainingSeconds)})`
         : 'Petualangan Berkelana Roh (O-dekake)',
       icon: '🎒',
       color: pet.activeOdekake
@@ -1270,8 +1177,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               {/* Music BGM Toggle */}
               <button
                 onClick={() => {
-                  const active = soundEngine.toggleAmbientBGM(timePhase, season);
-                  setIsBgmActive(active);
+                  const active = toggleBgm();
                   const seasonNames: Record<SeasonType, string> = {
                     spring: '🌸 Musim Semi (Haru)',
                     summer: '🍃 Musim Panas (Natsu)',
@@ -1321,8 +1227,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               {/* Sound Mute Toggle */}
               <button
                 onClick={() => {
-                  const muted = soundEngine.toggleMute();
-                  setIsMuted(muted);
+                  const muted = toggleMute();
                   showToast(muted ? '🔇 Seluruh Audio Santuari Dibisukan' : '🔊 Audio Santuari Aktif');
                 }}
                 className={`p-1 sm:p-1.5 rounded-lg transition-all cursor-pointer ${
@@ -1357,7 +1262,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               }}
               title={
                 pet.activeOdekake
-                  ? `Sedang Berkelana ke ${pet.activeOdekake.destinationName} (${formatOdekakeCountdown(odekakeRemainingSeconds)})`
+                  ? `Sedang Berkelana ke ${pet.activeOdekake.destinationName} (${formatCountdown(odekakeRemainingSeconds)})`
                   : 'Petualangan Berkelana Roh (O-dekake / Tabi)'
               }
               className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-[10px] sm:text-xs font-extrabold shadow-sm transition-all cursor-pointer flex-shrink-0 ${
@@ -1369,7 +1274,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <span className="text-xs">{pet.activeOdekake ? '🚶' : '🎒'}</span>
               <span className="font-bold hidden xs:inline">
                 {pet.activeOdekake
-                  ? `Tabi ${formatOdekakeCountdown(odekakeRemainingSeconds)}`
+                  ? `Tabi ${formatCountdown(odekakeRemainingSeconds)}`
                   : 'Berkelana'}
               </span>
             </button>
@@ -1613,7 +1518,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <span className="text-[11px] sm:text-xs">
                 <strong>{pet.name}</strong> sedang tidur lelap:{' '}
                 <span className="font-mono font-bold text-amber-300 bg-purple-900/60 px-1.5 py-0.5 rounded border border-purple-400/40">
-                  ⏱️ {formatSleepCountdown(sleepRemainingSeconds)}
+                  ⏱️ {formatCountdown(sleepRemainingSeconds)}
                 </span>
               </span>
             </div>
@@ -1648,7 +1553,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <span className="text-[11px] sm:text-xs truncate">
                 <strong>{pet.name}</strong> berkelana ke {pet.activeOdekake.destinationName}:{' '}
                 <span className="font-mono font-bold text-amber-300 bg-amber-900/60 px-1.5 py-0.5 rounded border border-amber-400/40">
-                  ⏱️ {formatOdekakeCountdown(odekakeRemainingSeconds)}
+                  ⏱️ {formatCountdown(odekakeRemainingSeconds)}
                 </span>
               </span>
             </div>
@@ -1730,7 +1635,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
               <div className="mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-900/70 border border-purple-400/60 text-[10px] sm:text-xs font-bold text-purple-200 group-hover:bg-purple-800 transition-all shadow-md">
                 <span>Tengok ke Kamar</span>
-                <span className="text-amber-300 font-mono">⏱️ {formatSleepCountdown(sleepRemainingSeconds)}</span>
+                <span className="text-amber-300 font-mono">⏱️ {formatCountdown(sleepRemainingSeconds)}</span>
               </div>
             </div>
           ) : pet.activeOdekake ? (
@@ -1773,7 +1678,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <div className="mt-3 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-900/80 border border-amber-400/70 text-[10px] sm:text-xs font-bold text-amber-100 group-hover:bg-amber-800 transition-all shadow-md">
                 <span>Periksa Kabar Perjalanan</span>
                 <span className="text-amber-300 font-mono bg-black/50 px-1.5 py-0.5 rounded border border-amber-500/40">
-                  ⏱️ {formatOdekakeCountdown(odekakeRemainingSeconds)}
+                  ⏱️ {formatCountdown(odekakeRemainingSeconds)}
                 </span>
               </div>
             </div>
@@ -1872,7 +1777,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                 {pet.isSleeping ? '💤' : '🛏️'}
               </span>
               <span className="text-[10px] sm:text-[11px] font-bold text-purple-200 mt-0.5 whitespace-nowrap">
-                {pet.isSleeping ? formatSleepCountdown(sleepRemainingSeconds) : 'Tidur'}
+                {pet.isSleeping ? formatCountdown(sleepRemainingSeconds) : 'Tidur'}
               </span>
             </button>
 
