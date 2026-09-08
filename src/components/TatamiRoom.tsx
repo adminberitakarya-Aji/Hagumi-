@@ -58,6 +58,28 @@ interface TatamiRoomProps {
   onOpenPrologue?: () => void;
 }
 
+/** Semua jenis modal yang bisa dibuka di TatamiRoom (satu aktif pada satu waktu). */
+export type ModalKind =
+  | 'bedroom'
+  | 'bento'
+  | 'bath'
+  | 'shop'
+  | 'shrine'
+  | 'matsuri'
+  | 'hanko'
+  | 'wardrobe'
+  | 'decor'
+  | 'memoryScroll'
+  | 'shrinePass'
+  | 'hanabi'
+  | 'haptic'
+  | 'parallax'
+  | 'sanctuaryMenu'
+  | 'backupRestore'
+  | 'sleepConfirm'
+  | 'odekake'
+  | 'zenGarden';
+
 export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   pet,
   setPet,
@@ -67,28 +89,17 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   // Traditional Shoji Screen Wipe Transition
   const { isShojiActive, shojiConfig, triggerShoji, handleShojiFinished } = useShojiTransition();
 
-  // Modal toggles (Otomatis buka Kamar Peraduan jika mode tidur masih aktif)
-  const [isBedroomOpen, setIsBedroomOpen] = useState<boolean>(() => {
-    return Boolean(pet.isSleeping && pet.sleepUntilTimestamp && pet.sleepUntilTimestamp > Date.now());
-  });
-  const [isBentoOpen, setIsBentoOpen] = useState(false);
-  const [isBathOpen, setIsBathOpen] = useState(false);
-  const [isShopOpen, setIsShopOpen] = useState(false);
-  const [isShrineOpen, setIsShrineOpen] = useState(false);
-  const [isMatsuriOpen, setIsMatsuriOpen] = useState(false);
-  const [isHankoOpen, setIsHankoOpen] = useState(false);
-  const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
-  const [isDecorOpen, setIsDecorOpen] = useState(false);
-  const [isMemoryScrollOpen, setIsMemoryScrollOpen] = useState(false);
-  const [isShrinePassOpen, setIsShrinePassOpen] = useState(false);
-  const [isHanabiOpen, setIsHanabiOpen] = useState(false);
-  const [isHapticModalOpen, setIsHapticModalOpen] = useState(false);
-  const [isParallaxModalOpen, setIsParallaxModalOpen] = useState(false);
-  const [isSanctuaryMenuOpen, setIsSanctuaryMenuOpen] = useState(false);
-  const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
-  const [isSleepConfirmOpen, setIsSleepConfirmOpen] = useState(false);
-  const [isOdekakeOpen, setIsOdekakeOpen] = useState(false);
-  const [isZenGardenOpen, setIsZenGardenOpen] = useState(false);
+  /**
+   * State modal terkonsolidasi: hanya satu modal terbuka pada satu waktu.
+   * Membuka modal lain akan MENUTUP modal yang sedang terbuka (perilaku replace),
+   * sehingga dua modal tidak mungkin terbuka bersamaan.
+   */
+  const [activeModal, setActiveModal] = useState<ModalKind | null>(() =>
+    // Otomatis buka Kamar Peraduan jika mode tidur masih aktif
+    Boolean(pet.isSleeping && pet.sleepUntilTimestamp && pet.sleepUntilTimestamp > Date.now())
+      ? 'bedroom'
+      : null
+  );
   const [completedTripToCelebrate, setCompletedTripToCelebrate] = useState<{
     destinationName: string;
     destinationKanji: string;
@@ -405,19 +416,19 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     hapticEngine.tap();
     switch (thoughtType) {
       case 'hunger':
-        if (!pet.isSleeping) setIsBentoOpen(true);
+        if (!pet.isSleeping) setActiveModal('bento');
         break;
       case 'energy':
-        if (!pet.isSleeping) setIsSleepConfirmOpen(true);
+        if (!pet.isSleeping) setActiveModal('sleepConfirm');
         break;
       case 'dirty':
-        if (!pet.isSleeping) setIsBathOpen(true);
+        if (!pet.isSleeping) setActiveModal('bath');
         break;
       case 'bored':
-        if (!pet.isSleeping) setIsMatsuriOpen(true);
+        if (!pet.isSleeping) setActiveModal('matsuri');
         break;
       case 'sick':
-        if (!pet.isSleeping) setIsShopOpen(true);
+        if (!pet.isSleeping) setActiveModal('shop');
         break;
       case 'happy':
         // Play a happy chirp and give a tiny bonding bonus
@@ -534,7 +545,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       label: 'Pemandian Onsen Hinoki',
       kanji: '🛁 湯',
       sublabel: 'Kolam Air Hangat & Busa Melati',
-      onMidpoint: () => setIsBathOpen(true),
+      onMidpoint: () => setActiveModal('bath'),
     });
   };
 
@@ -574,7 +585,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       sublabel: 'Peristirahatan Futon & Selimut Sutra',
       onMidpoint: () => {
         setIsLanternOn(false);
-        setIsBedroomOpen(true);
+        setActiveModal('bedroom');
       },
     });
   };
@@ -652,7 +663,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       };
     });
 
-    setIsOdekakeOpen(false);
+    setActiveModal(null);
     showToast(`✨ Kitsunebi Return! ${pet.name} kembali pulang membawa ${partialCoins} Ryo & ${partialExp} EXP!`);
   };
 
@@ -703,7 +714,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
   // Confirm Sleep for 15 minutes & automatically open Bedroom Scene
   const handleConfirmSleep = () => {
-    setIsSleepConfirmOpen(false);
+    setActiveModal(null);
     soundEngine.playSleepChime();
     hapticEngine.heavy();
 
@@ -727,7 +738,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       kanji: '🛏️ 眠',
       sublabel: `Peristirahatan Kasur Futon • ${pet.name}`,
       onMidpoint: () => {
-        setIsBedroomOpen(true);
+        setActiveModal('bedroom');
       },
     });
   };
@@ -737,7 +748,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     if (pet.isSleeping) {
       handleOpenBedroomScene();
     } else {
-      setIsSleepConfirmOpen(true);
+      setActiveModal('sleepConfirm');
     }
   };
 
@@ -931,7 +942,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           label: 'Kotak Bento Jubako',
           kanji: '🍱 食',
           sublabel: 'Perjamuan Kuliner & Khasiat Roh',
-          onMidpoint: () => setIsBentoOpen(true),
+          onMidpoint: () => setActiveModal('bento'),
         });
       },
     },
@@ -1005,7 +1016,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           label: 'Lemari Busana Miyabi',
           kanji: '👘 衣',
           sublabel: 'Kimono & Aksesoris Roh Kitsune',
-          onMidpoint: () => setIsWardrobeOpen(true),
+          onMidpoint: () => setActiveModal('wardrobe'),
         });
       },
     },
@@ -1031,7 +1042,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           label: 'Petualangan Berkelana Roh',
           kanji: '🎒 旅',
           sublabel: 'O-dekake • Kuil & Pegunungan Sakral',
-          onMidpoint: () => setIsOdekakeOpen(true),
+          onMidpoint: () => setActiveModal('odekake'),
         });
       },
     },
@@ -1060,7 +1071,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           label: 'Kuil Inari Okami',
           kanji: '⛩️ 社',
           sublabel: 'Fushimi Inari • Kotodama & Ema',
-          onMidpoint: () => setIsShrineOpen(true),
+          onMidpoint: () => setActiveModal('shrine'),
         });
       },
     },
@@ -1089,7 +1100,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           label: 'Pekan Raya Matsuri',
           kanji: '🏮 祭',
           sublabel: 'Natsu Matsuri • Taiko & Mini-Games',
-          onMidpoint: () => setIsMatsuriOpen(true),
+          onMidpoint: () => setActiveModal('matsuri'),
         });
       },
     },
@@ -1106,7 +1117,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           label: 'Toko Serba Ada Tanuki',
           kanji: '🏪 店',
           sublabel: 'Minimarket Modern Istana Rubah',
-          onMidpoint: () => setIsShopOpen(true),
+          onMidpoint: () => setActiveModal('shop'),
         });
       },
     },
@@ -1120,7 +1131,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       border: 'border-amber-500/80',
       onClick: () => {
         soundEngine.playClick();
-        setIsSanctuaryMenuOpen(true);
+        setActiveModal('sanctuaryMenu');
       },
     },
   ];
@@ -1152,7 +1163,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             <button
               onClick={() => {
                 soundEngine.playClick();
-                setIsHankoOpen(true);
+                setActiveModal('hanko');
               }}
               title="Lihat Buku Silsilah & Cap Hanko"
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-600 border border-rose-400 text-white font-['Shippori_Mincho',serif] font-bold text-sm sm:text-lg flex items-center justify-center shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
@@ -1203,7 +1214,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Kuil Inari Okami',
                   kanji: '⛩️ 縁',
                   sublabel: `Ikatan Batin Lv.${bondInfo.level} • ${bondInfo.currentMilestone.title}`,
-                  onMidpoint: () => setIsShrineOpen(true),
+                  onMidpoint: () => setActiveModal('shrine'),
                 });
               }}
               title={`Ikatan Batin (Kizuna Lv.${bondInfo.level}: ${bondInfo.currentMilestone.title}) • Pengasuh: ${pet.caretakerName || 'Pengasuh'}`}
@@ -1220,7 +1231,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Toko Serba Ada Tanuki',
                   kanji: '🏪 店',
                   sublabel: 'Minimarket Modern Istana Rubah',
-                  onMidpoint: () => setIsShopOpen(true),
+                  onMidpoint: () => setActiveModal('shop'),
                 });
               }}
               title="Buka Toko Tanuki (08.00 - 22.00)"
@@ -1235,7 +1246,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             <button
               onClick={() => {
                 soundEngine.playClick();
-                setIsParallaxModalOpen(true);
+                setActiveModal('parallax');
               }}
               title={`Mode Parallax 2.5D: ${
                 parallax.mode === 'dynamic'
@@ -1342,7 +1353,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             <button
               onClick={() => {
                 soundEngine.playClick();
-                setIsOdekakeOpen(true);
+                setActiveModal('odekake');
               }}
               title={
                 pet.activeOdekake
@@ -1367,7 +1378,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             <button
               onClick={() => {
                 soundEngine.playClick();
-                setIsZenGardenOpen(true);
+                setActiveModal('zenGarden');
               }}
               title="Engawa & Taman Zen Santuari (Kolam Ikan Koi & Pasir Karesansui)"
               className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-teal-950/90 to-emerald-950 border border-teal-500/80 text-teal-200 font-extrabold text-[10px] sm:text-xs shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0"
@@ -1583,7 +1594,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             <button
               onClick={() => {
                 soundEngine.playClick();
-                setIsShopOpen(true);
+                setActiveModal('shop');
               }}
               className="px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[9px] sm:text-[10px] whitespace-nowrap cursor-pointer flex-shrink-0"
             >
@@ -1608,7 +1619,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
-                onClick={() => setIsShopOpen(true)}
+                onClick={() => setActiveModal('shop')}
                 className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 text-amber-200 text-[10px] font-bold border border-amber-600/60 cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1"
                 title="Toko Tanuki tetap buka dan bisa belanja kapan saja"
               >
@@ -1645,7 +1656,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <button
                 onClick={() => {
                   soundEngine.playClick();
-                  setIsOdekakeOpen(true);
+                  setActiveModal('odekake');
                 }}
                 className="px-2.5 py-0.5 rounded-lg bg-amber-700/80 hover:bg-amber-600 text-white text-[10px] font-bold border border-amber-400/60 cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1"
               >
@@ -1728,7 +1739,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 soundEngine.playClick();
-                setIsOdekakeOpen(true);
+                setActiveModal('odekake');
               }}
               className="relative flex flex-col items-center justify-center p-4 sm:p-6 rounded-3xl bg-gradient-to-b from-[#2a1b12]/90 to-[#180f0a]/95 border-2 border-amber-500/70 backdrop-blur-md max-w-sm text-center cursor-pointer hover:border-amber-400 hover:bg-black/70 transition-all group shadow-2xl animate-in fade-in"
               title="Klik untuk melihat kabar perjalanan Kitsune"
@@ -1805,7 +1816,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Kotak Bento Jubako',
                   kanji: '🍱 食',
                   sublabel: 'Perjamuan Kuliner & Khasiat Roh',
-                  onMidpoint: () => setIsBentoOpen(true),
+                  onMidpoint: () => setActiveModal('bento'),
                 });
               }}
               className={`py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl flex flex-col items-center justify-center transition-all shadow-md group ${
@@ -1876,7 +1887,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Lemari Busana Miyabi',
                   kanji: '👘 衣',
                   sublabel: 'Kimono & Aksesoris Roh Kitsune',
-                  onMidpoint: () => setIsWardrobeOpen(true),
+                  onMidpoint: () => setActiveModal('wardrobe'),
                 });
               }}
               className={`py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl flex flex-col items-center justify-center transition-all shadow-md group ${
@@ -1905,7 +1916,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Kuil Inari Okami',
                   kanji: '⛩️ 社',
                   sublabel: 'Fushimi Inari • Kotodama & Ema',
-                  onMidpoint: () => setIsShrineOpen(true),
+                  onMidpoint: () => setActiveModal('shrine'),
                 });
               }}
               className={`py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl flex flex-col items-center justify-center transition-all shadow-md group ${
@@ -1934,7 +1945,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Pekan Raya Matsuri',
                   kanji: '🏮 祭',
                   sublabel: 'Natsu Matsuri • Taiko & Mini-Games',
-                  onMidpoint: () => setIsMatsuriOpen(true),
+                  onMidpoint: () => setActiveModal('matsuri'),
                 });
               }}
               className={`py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl flex flex-col items-center justify-center transition-all shadow-md group ${
@@ -1959,7 +1970,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   label: 'Toko Serba Ada Tanuki',
                   kanji: '🏪 店',
                   sublabel: 'Minimarket Modern Istana Rubah',
-                  onMidpoint: () => setIsShopOpen(true),
+                  onMidpoint: () => setActiveModal('shop'),
                 });
               }}
               className="py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl bg-gradient-to-b from-[#3a281e] to-[#251811] hover:from-[#483327] hover:to-[#2e1f16] border border-amber-500 text-stone-100 flex flex-col items-center justify-center transition-all active:scale-95 shadow-md cursor-pointer group ring-1 ring-amber-500/50"
@@ -1977,7 +1988,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             <button
               onClick={() => {
                 soundEngine.playClick();
-                setIsSanctuaryMenuOpen(true);
+                setActiveModal('sanctuaryMenu');
               }}
               className="py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl bg-gradient-to-b from-[#3a281e] to-[#251811] hover:from-[#483327] hover:to-[#2e1f16] border border-amber-500/80 text-stone-100 flex flex-col items-center justify-center transition-all active:scale-95 shadow-md cursor-pointer group"
               title="Menu Fitur Santuari"
@@ -2021,18 +2032,18 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* MODALS & FULLSCREEN SANCTUARY ROOMS */}
       <BentoFoodModal
-        isOpen={isBentoOpen}
-        onClose={() => setIsBentoOpen(false)}
+        isOpen={activeModal === 'bento'}
+        onClose={() => setActiveModal(null)}
         inventory={pet.inventory}
         onFeedItem={handleFeedItem}
-        onOpenShop={() => setIsShopOpen(true)}
+        onOpenShop={() => setActiveModal('shop')}
         hunger={pet.stats.hunger}
         happiness={pet.stats.happiness}
         petName={pet.name}
         coins={pet.coins}
         pet={pet}
         onFinishDining={() => {
-          setIsBentoOpen(false);
+          setActiveModal(null);
           soundEngine.playChime();
           hapticEngine.heavy();
           showToast(`🙏 Gochisousama! ${pet.name} kenyang dan puas bersantap di Meja Bento!`);
@@ -2041,33 +2052,33 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Onsen Bath Sanctuary Scene */}
       <OnsenBathModal
-        isOpen={isBathOpen}
-        onClose={() => setIsBathOpen(false)}
+        isOpen={activeModal === 'bath'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         onFinishBath={handleFinishBath}
       />
 
       {/* Futon Bedroom Sanctuary Scene */}
       <FutonBedroomModal
-        isOpen={isBedroomOpen}
-        onClose={() => setIsBedroomOpen(false)}
+        isOpen={activeModal === 'bedroom'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         onWakeUp={handleWakeUpFromBedroom}
-        onOpenShop={() => setIsShopOpen(true)}
+        onOpenShop={() => setActiveModal('shop')}
       />
 
       <TanukiShopModal
-        isOpen={isShopOpen}
-        onClose={() => setIsShopOpen(false)}
+        isOpen={activeModal === 'shop'}
+        onClose={() => setActiveModal(null)}
         coins={pet.coins}
         inventory={pet.inventory}
         onBuyItem={handleBuyItem}
-        onOpenWardrobe={() => setIsWardrobeOpen(true)}
+        onOpenWardrobe={() => setActiveModal('wardrobe')}
       />
 
       <ShrineModal
-        isOpen={isShrineOpen}
-        onClose={() => setIsShrineOpen(false)}
+        isOpen={activeModal === 'shrine'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         setPet={setPet}
         showToast={showToast}
@@ -2075,29 +2086,29 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       />
 
       <MatsuriGamesModal
-        isOpen={isMatsuriOpen}
-        onClose={() => setIsMatsuriOpen(false)}
+        isOpen={activeModal === 'matsuri'}
+        onClose={() => setActiveModal(null)}
         onReward={handleGameReward}
       />
 
       <HankoAlbumModal
-        isOpen={isHankoOpen}
-        onClose={() => setIsHankoOpen(false)}
+        isOpen={activeModal === 'hanko'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         onResetPet={onResetPet}
       />
 
       <WardrobeModal
-        isOpen={isWardrobeOpen}
-        onClose={() => setIsWardrobeOpen(false)}
+        isOpen={activeModal === 'wardrobe'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         setPet={setPet}
         showToast={showToast}
       />
 
       <SanctuaryDecorModal
-        isOpen={isDecorOpen}
-        onClose={() => setIsDecorOpen(false)}
+        isOpen={activeModal === 'decor'}
+        onClose={() => setActiveModal(null)}
         currentDecor={pet.sanctuaryDecor || DEFAULT_SANCTUARY_DECOR}
         coins={pet.coins}
         petLevel={pet.level}
@@ -2121,8 +2132,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Buku Harian Roh (Memory Scroll & Ukiyo-e Album) Modal */}
       <MemoryScrollModal
-        isOpen={isMemoryScrollOpen}
-        onClose={() => setIsMemoryScrollOpen(false)}
+        isOpen={activeModal === 'memoryScroll'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         onAddDiaryNote={handleAddDiaryNote}
         onDeleteDiaryNote={handleDeleteDiaryNote}
@@ -2130,8 +2141,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Paspor Kuil & Pertukaran Ziarah (Shrine Pass) Modal */}
       <ShrinePassModal
-        isOpen={isShrinePassOpen}
-        onClose={() => setIsShrinePassOpen(false)}
+        isOpen={activeModal === 'shrinePass'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         visitedShrines={visitedShrines}
         setVisitedShrines={setVisitedShrines}
@@ -2140,28 +2151,28 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Pengrajin Kembang Api Tradisional (Hanabi Maker) Mini-Game Modal */}
       <HanabiMakerModal
-        isOpen={isHanabiOpen}
-        onClose={() => setIsHanabiOpen(false)}
+        isOpen={activeModal === 'hanabi'}
+        onClose={() => setActiveModal(null)}
         onLaunchSuccess={handleHanabiSuccess}
       />
 
       {/* Pengaturan Umpan Balik Taktil (Haptic Feedback) Modal */}
       <HapticSettingsModal
-        isOpen={isHapticModalOpen}
-        onClose={() => setIsHapticModalOpen(false)}
+        isOpen={activeModal === 'haptic'}
+        onClose={() => setActiveModal(null)}
       />
 
       {/* Menu Fitur Santuari Tradisional Modal */}
       <SanctuaryMenuModal
-        isOpen={isSanctuaryMenuOpen}
-        onClose={() => setIsSanctuaryMenuOpen(false)}
+        isOpen={activeModal === 'sanctuaryMenu'}
+        onClose={() => setActiveModal(null)}
         onOpenPrologue={onOpenPrologue}
         onOpenHanko={() => {
           triggerShoji({
             label: 'Kitab Segel Hanko',
             kanji: '📜 印',
             sublabel: 'Arsip Silsilah Roh Kitsune',
-            onMidpoint: () => setIsHankoOpen(true),
+            onMidpoint: () => setActiveModal('hanko'),
           });
         }}
         onOpenMemoryScroll={() => {
@@ -2169,7 +2180,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             label: 'Gulungan Memori Emakimono',
             kanji: '📖 記',
             sublabel: 'Album Ukiyo-e & Catatan Kenangan',
-            onMidpoint: () => setIsMemoryScrollOpen(true),
+            onMidpoint: () => setActiveModal('memoryScroll'),
           });
         }}
         onOpenShrinePass={() => {
@@ -2177,7 +2188,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             label: 'Paspor Ziarah Inari',
             kanji: '⛩️ 通',
             sublabel: 'Ziarah Kuil Teman & Tukar Berkah',
-            onMidpoint: () => setIsShrinePassOpen(true),
+            onMidpoint: () => setActiveModal('shrinePass'),
           });
         }}
         onOpenHanabi={() => {
@@ -2185,7 +2196,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             label: 'Pesta Kembang Api Hanabi',
             kanji: '🎆 火',
             sublabel: 'Hanabi Taikai • Langit Festival',
-            onMidpoint: () => setIsHanabiOpen(true),
+            onMidpoint: () => setActiveModal('hanabi'),
           });
         }}
         onOpenDecor={() => {
@@ -2193,21 +2204,21 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             label: 'Renovasi Sanctuary Tatami',
             kanji: '🏡 館',
             sublabel: 'Tatami, Altar & Kakemono',
-            onMidpoint: () => setIsDecorOpen(true),
+            onMidpoint: () => setActiveModal('decor'),
           });
         }}
         onOpenHaptic={() => {
-          setIsHapticModalOpen(true);
+          setActiveModal('haptic');
         }}
         onOpenParallax={() => {
-          setIsParallaxModalOpen(true);
+          setActiveModal('parallax');
         }}
         onOpenWardrobe={() => {
           triggerShoji({
             label: 'Lemari Busana Miyabi',
             kanji: '👘 衣',
             sublabel: 'Kimono & Aksesoris Roh Kitsune',
-            onMidpoint: () => setIsWardrobeOpen(true),
+            onMidpoint: () => setActiveModal('wardrobe'),
           });
         }}
         onTriggerShoji={() => {
@@ -2225,7 +2236,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             label: 'Toko Serba Ada Tanuki',
             kanji: '🏪 店',
             sublabel: 'Minimarket Modern Istana Rubah',
-            onMidpoint: () => setIsShopOpen(true),
+            onMidpoint: () => setActiveModal('shop'),
           });
         }}
         onOpenShrine={() => {
@@ -2233,17 +2244,17 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
             label: 'Kuil Inari Okami',
             kanji: '⛩️ 縁',
             sublabel: `Ikatan Batin Lv.${bondInfo.level} • ${bondInfo.currentMilestone.title}`,
-            onMidpoint: () => setIsShrineOpen(true),
+            onMidpoint: () => setActiveModal('shrine'),
           });
         }}
         onOpenBackupRestore={() => {
-          setIsBackupRestoreOpen(true);
+          setActiveModal('backupRestore');
         }}
         onOpenOdekake={() => {
-          setIsOdekakeOpen(true);
+          setActiveModal('odekake');
         }}
         onOpenZenGarden={() => {
-          setIsZenGardenOpen(true);
+          setActiveModal('zenGarden');
         }}
         onCycleSeason={handleCycleSeason}
         currentSeason={season}
@@ -2251,8 +2262,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Petualangan Berkelana Roh (O-dekake / Tabi) Modal */}
       <OdekakeModal
-        isOpen={isOdekakeOpen}
-        onClose={() => setIsOdekakeOpen(false)}
+        isOpen={activeModal === 'odekake'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         onDepart={handleDepartOdekake}
         onRecallEarly={handleRecallEarlyOdekake}
@@ -2274,8 +2285,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Taman Zen & Kolam Ikan Koi (Engawa Karesansui) Modal */}
       <ZenGardenModal
-        isOpen={isZenGardenOpen}
-        onClose={() => setIsZenGardenOpen(false)}
+        isOpen={activeModal === 'zenGarden'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         setPet={setPet}
         showToast={showToast}
@@ -2283,8 +2294,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Cadangan & Pemulihan Santuari (Backup & Restore) Modal */}
       <BackupRestoreModal
-        isOpen={isBackupRestoreOpen}
-        onClose={() => setIsBackupRestoreOpen(false)}
+        isOpen={activeModal === 'backupRestore'}
+        onClose={() => setActiveModal(null)}
         pet={pet}
         onRestore={(restoredPet) => {
           setPet(restoredPet);
@@ -2295,8 +2306,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
       {/* Sensasi Kedalaman Parallax 2.5D Settings Modal */}
       <ParallaxSettingsModal
-        isOpen={isParallaxModalOpen}
-        onClose={() => setIsParallaxModalOpen(false)}
+        isOpen={activeModal === 'parallax'}
+        onClose={() => setActiveModal(null)}
         mode={parallax.mode}
         onSetMode={parallax.setMode}
         x={parallax.x}
@@ -2307,7 +2318,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       />
 
       {/* DIALOG KONFIRMASI TIDUR 15 MENIT */}
-      {isSleepConfirmOpen && (
+      {activeModal === 'sleepConfirm' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-950/80 backdrop-blur-sm animate-in fade-in select-none">
           <div className="relative max-w-md w-full rounded-2xl sm:rounded-3xl bg-stone-950/95 border-2 border-purple-500/70 p-5 sm:p-6 shadow-2xl space-y-4 text-stone-100">
             {/* Header Dialog */}
@@ -2355,7 +2366,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               <button
                 onClick={() => {
                   soundEngine.playClick();
-                  setIsSleepConfirmOpen(false);
+                  setActiveModal(null);
                 }}
                 className="py-2.5 px-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-bold text-xs active:scale-95 transition-all cursor-pointer text-center"
               >
