@@ -47,6 +47,7 @@ import { useAmbient } from '../hooks/useAmbient';
 import { useAudioHaptic } from '../hooks/useAudioHaptic';
 import { useCountdown, formatCountdown } from '../hooks/useTimers';
 import { SensuFanHUD, SensuItem } from './SensuFanHUD';
+import { DialogA11yWrapper } from '../hooks/useDialogA11y';
 import { HapticSettingsModal } from './HapticSettingsModal';
 import { ParallaxSettingsModal } from './ParallaxSettingsModal';
 import { useParallax2D } from '../utils/useParallax2D';
@@ -82,6 +83,29 @@ export type ModalKind =
   | 'sleepConfirm'
   | 'odekake'
   | 'zenGarden';
+
+/** Label dialog yang ramah pembaca layar untuk setiap ModalKind. */
+export const MODAL_LABELS: Record<ModalKind, string> = {
+  bedroom: 'Kamar Peraduan Futon',
+  bento: 'Meja Makan Bento',
+  bath: 'Mandi Onsen',
+  shop: 'Toko Serba Ada Tanuki',
+  shrine: 'Kuil Inari',
+  matsuri: 'Festival Matsuri',
+  hanko: 'Album Cap Hanko',
+  wardrobe: 'Lemari Busana Kitsune Tansu',
+  decor: 'Dekorasi Santuari',
+  memoryScroll: 'Buku Harian Roh',
+  shrinePass: 'Paspor Ziarah Kuil',
+  hanabi: 'Pembuat Kembang Api Hanabi',
+  haptic: 'Pengaturan Getaran Haptic',
+  parallax: 'Pengaturan Parallax 2.5D',
+  sanctuaryMenu: 'Menu Fitur Santuari',
+  backupRestore: 'Cadangan & Pemulihan Santuari',
+  sleepConfirm: 'Konfirmasi Tidur 15 Menit',
+  odekake: 'Petualangan Berkelana Odekake',
+  zenGarden: 'Taman Zen & Kolam Koi Engawa',
+};
 
 export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   pet,
@@ -1182,6 +1206,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   ? 'bg-gradient-to-r from-[#381f14] to-[#24130c] border-amber-500/80 text-amber-200 hover:brightness-110'
                   : 'bg-stone-900/90 border-stone-700/80 text-stone-400 hover:text-stone-200'
               }`}
+              aria-label="Mode Parallax 2.5D"
             >
               <span>🪞</span>
               <span className="hidden sm:inline">2.5D</span>
@@ -1216,6 +1241,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                     ? `Jeda Musik Zen (${season} • ${timePhase})`
                     : 'Putar Musik Zen Kuil Inari (Koto & Shakuhachi)'
                 }
+                aria-label={isBgmActive ? 'Jeda Musik Zen' : 'Putar Musik Zen'}
                 className={`relative p-1 sm:p-1.5 rounded-lg transition-all cursor-pointer ${
                   isBgmActive
                     ? 'bg-amber-600/40 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.4)]'
@@ -1230,6 +1256,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
               {/* Time Phase Indicator */}
               <div
+                role="img"
+                aria-label={`Fase Waktu: ${timePhase}`}
                 title={`Fase Waktu: ${timePhase === 'morning' ? 'Pagi (朝)' : timePhase === 'noon' ? 'Siang (昼)' : timePhase === 'evening' ? 'Senja (夕)' : 'Malam (夜)'}`}
                 className="px-1 text-[10px] text-stone-300 font-medium select-none"
               >
@@ -1249,6 +1277,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   isMuted ? 'text-red-400 hover:text-red-300' : 'text-stone-400 hover:text-stone-200'
                 }`}
                 title={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
+                aria-label={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
               >
                 {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
               </button>
@@ -1262,6 +1291,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   onOpenPrologue();
                 }}
                 title="Buka Gerbang Torii & Prologue (Gunung Fuji, 9 Ekor, Ema)"
+                aria-label="Buka Gerbang Torii & Prologue"
                 className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-red-950/90 to-amber-950 border border-amber-500/90 text-amber-200 font-extrabold text-[10px] sm:text-xs shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0"
               >
                 <span className="text-xs">⛩️</span>
@@ -1280,6 +1310,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                   ? `Sedang Berkelana ke ${pet.activeOdekake.destinationName} (${formatCountdown(odekakeRemainingSeconds)})`
                   : 'Petualangan Berkelana Roh (O-dekake / Tabi)'
               }
+              aria-label="Petualangan Berkelana Odekake"
               className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-[10px] sm:text-xs font-extrabold shadow-sm transition-all cursor-pointer flex-shrink-0 ${
                 pet.activeOdekake
                   ? 'bg-gradient-to-r from-amber-700 to-amber-900 border-amber-400 text-amber-100 ring-1 ring-amber-400/60 animate-pulse'
@@ -1956,7 +1987,14 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         }}
       />
 
-      {/* MODALS & FULLSCREEN SANCTUARY ROOMS */}
+      {/* MODALS & FULLSCREEN SANCTUARY ROOMS
+          (satu state activeModal → satu dialog aktif; dibungkus role="dialog"
+           + focus trap + Esc + restorasi fokus via DialogA11yWrapper) */}
+      <DialogA11yWrapper
+        isActive={activeModal !== null}
+        onClose={() => setActiveModal(null)}
+        label={activeModal ? MODAL_LABELS[activeModal] : 'Dialog Santuari'}
+      >
       <BentoFoodModal
         isOpen={activeModal === 'bento'}
         onClose={() => setActiveModal(null)}
@@ -2308,6 +2346,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           </div>
         </div>
       )}
+      </DialogA11yWrapper>
 
       {/* Traditional Shoji/Fusuma Sliding Door Screen Wipe Transition */}
       <ShojiTransition

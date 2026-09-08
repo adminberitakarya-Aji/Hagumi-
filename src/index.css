@@ -9,3 +9,22 @@ html, body, #root {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* ============================================================
+   Aksesibilitas: hormati preferensi pengguna yang sensitif gerak
+   (prefers-reduced-motion) — matikan animasi & transisi CSS di
+   seluruh aplikasi (Tailwind animate-in, animate-pulse/ping,
+   transisi hover, dll.). Animasi Canvas (kitsune) tidak tercakup
+   CSS dan ditangani terpisah.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

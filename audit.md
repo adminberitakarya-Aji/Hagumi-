@@ -155,9 +155,10 @@ Dalam skala industri:
 
 ### Mid-Term
 - [x] Unit test (SELESAI: Vitest 5 ditambahkan, script `npm run test`/`test:watch`; **79 test lulus** di 3 file — `gameConfig.test.ts` (kurva EXP, multi-level-up, evolusi bercabang, Kizuna, sanity katalog), `petSaveSchema.test.ts` (roundtrip, migrasi v1→v2, tolak save korup/versi baru, sanitasi clamp), `decayLoop.test.ts` (tick decay terjaga/tidur, poop, sakit, Care Score, offline decay cap/floor). Logika decay diekstrak ke `src/utils/decayLoop.ts` (pure) agar testable — `useGameLoop.ts` 208→88 baris, perilaku tidak berubah).
-- [ ] Aksesibilitas: aria-label, role dialog + focus trap, keyboard nav, `prefers-reduced-motion`.
+- [x] Aksesibilitas (SELESAI): hook `useDialogA11y` + `DialogA11yWrapper` (focus trap Tab/Shift+Tab, Esc menutup, simpan & kembalikan fokus ke pemicu, fokus awal ke elemen interaktif pertama); semua 19 modal `TatamiRoom` + 4 modal `App` dibungkus `role="dialog" aria-modal aria-label` dengan label Indonesia per modal; aria-label untuk tombol ikon HUD (BGM, mute, parallax, gerbang, odekake, indikator fase waktu `role="img"`); `prefers-reduced-motion` via CSS global di `index.css` (menonaktifkan animasi/transisi Tailwind).
 - [ ] React Error Boundary + modal konfirmasi reset pet.
 - [ ] Pecah `TatamiRoom.tsx` & `soundEngine.ts` menjadi modul lebih kecil.
+- [ ] *Follow-up* aksesibilitas: aria-label untuk tombol tutup (X) di tiap modal (saat ini fokus awal otomatis ke tombol pertama sehingga tetap bisa dioperasikan keyboard), dan hormati `prefers-reduced-motion` di animasi Canvas (`KitsuneCanvas`/`SeasonParticles`) via `matchMedia`.
 
 ### Long-Term
 - [ ] PWA: `manifest.json` + Service Worker (sudah di roadmap).

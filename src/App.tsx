@@ -7,6 +7,7 @@ import { OfflineReturnModal } from './components/OfflineReturnModal';
 import { ToriiPrologueGateway } from './components/ToriiPrologueGateway';
 import { EvolutionTarget, determineNextEvolution } from './data/gameConfig';
 import { PetData } from './types/game';
+import { DialogA11yWrapper } from './hooks/useDialogA11y';
 
 export default function App() {
   const {
@@ -83,12 +84,14 @@ export default function App() {
   if ((!pet || pet.stage === 'egg') && isPrologueOpen) {
     return (
       <div className="min-h-screen bg-[#0e0906] text-stone-100 flex flex-col justify-center">
-        <ToriiPrologueGateway
-          isOpen={true}
-          onEnterSanctuary={() => setIsPrologueOpen(false)}
-          onClaimBlessingReward={handleClaimBlessingReward}
-          onSaveEmaPrayer={handleSaveEmaPrayer}
-        />
+        <DialogA11yWrapper isActive={true} label="Gerbang Prolog Torii">
+          <ToriiPrologueGateway
+            isOpen={true}
+            onEnterSanctuary={() => setIsPrologueOpen(false)}
+            onClaimBlessingReward={handleClaimBlessingReward}
+            onSaveEmaPrayer={handleSaveEmaPrayer}
+          />
+        </DialogA11yWrapper>
       </div>
     );
   }
@@ -97,11 +100,13 @@ export default function App() {
   if (!pet || pet.stage === 'egg') {
     return (
       <div className="min-h-screen bg-[#181411] text-stone-100 flex flex-col justify-center">
-        <EggAltarModal
-          onHatchComplete={(newPet: PetData) => {
-            setPet(newPet);
-          }}
-        />
+        <DialogA11yWrapper isActive={true} label="Altar Penetasan Telur Inari">
+          <EggAltarModal
+            onHatchComplete={(newPet: PetData) => {
+              setPet(newPet);
+            }}
+          />
+        </DialogA11yWrapper>
       </div>
     );
   }
@@ -142,34 +147,44 @@ export default function App() {
 
       {/* Torii Prologue Gateway Overlay */}
       {isPrologueOpen && (
-        <ToriiPrologueGateway
-          isOpen={isPrologueOpen}
-          onEnterSanctuary={() => setIsPrologueOpen(false)}
-          onClose={() => setIsPrologueOpen(false)}
-          onClaimBlessingReward={handleClaimBlessingReward}
-          onSaveEmaPrayer={handleSaveEmaPrayer}
-        />
+        <DialogA11yWrapper isActive={isPrologueOpen} label="Gerbang Prolog Torii">
+          <ToriiPrologueGateway
+            isOpen={isPrologueOpen}
+            onEnterSanctuary={() => setIsPrologueOpen(false)}
+            onClose={() => setIsPrologueOpen(false)}
+            onClaimBlessingReward={handleClaimBlessingReward}
+            onSaveEmaPrayer={handleSaveEmaPrayer}
+          />
+        </DialogA11yWrapper>
       )}
 
       {/* Evolution Ceremony Modal */}
       {activeEvolution && (
-        <EvolutionModal
-          isOpen={Boolean(activeEvolution)}
-          evolutionTarget={activeEvolution}
-          pet={pet}
-          onConfirmEvolution={handleConfirmEvolution}
-        />
+        <DialogA11yWrapper isActive={true} label="Upacara Evolusi Kitsune">
+          <EvolutionModal
+            isOpen={Boolean(activeEvolution)}
+            evolutionTarget={activeEvolution}
+            pet={pet}
+            onConfirmEvolution={handleConfirmEvolution}
+          />
+        </DialogA11yWrapper>
       )}
 
       {/* Offline Return Progress Modal */}
       {offlineAwayMinutes !== null && offlineAwayMinutes >= 3 && (
-        <OfflineReturnModal
-          isOpen={true}
+        <DialogA11yWrapper
+          isActive={true}
           onClose={closeOfflineModal}
-          minutesAway={offlineAwayMinutes}
-          petName={pet.name}
-          bonusCoins={offlineCoins}
-        />
+          label="Ringkasan Kepulangan Offline"
+        >
+          <OfflineReturnModal
+            isOpen={true}
+            onClose={closeOfflineModal}
+            minutesAway={offlineAwayMinutes}
+            petName={pet.name}
+            bonusCoins={offlineCoins}
+          />
+        </DialogA11yWrapper>
       )}
     </div>
   );
