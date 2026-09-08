@@ -16,12 +16,7 @@ import {
 import { PetData } from '../types/game';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
-import {
-  DEFAULT_SANCTUARY_DECOR,
-  DEFAULT_UNLOCKED_DECOR,
-  DEFAULT_SHRINE_WISHES,
-  getBondingLevelInfo,
-} from '../data/gameConfig';
+import { parseAndMigratePetSave } from '../utils/petSaveSchema';
 
 interface BackupRestoreModalProps {
   isOpen: boolean;
@@ -59,81 +54,11 @@ export function decodeBase64ToPetData(encodedStr: string): PetData {
     jsonStr = new TextDecoder('utf-8').decode(bytes);
   }
 
-  const parsed = JSON.parse(jsonStr);
-  return validateAndSanitizePetData(parsed);
-}
-
-// Validate schema and sanitize pet data with backward compatibility
-export function validateAndSanitizePetData(parsed: any): PetData {
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('Format data tidak valid (bukan objek JSON).');
+  const result = parseAndMigratePetSave(jsonStr);
+  if (!result.ok) {
+    throw new Error(result.error);
   }
-
-  if (!parsed.name || typeof parsed.name !== 'string') {
-    throw new Error('Data tidak memiliki atribut nama Kitsune yang valid.');
-  }
-
-  if (!parsed.stats || typeof parsed.stats !== 'object') {
-    throw new Error('Data tidak memiliki atribut status vitals (lapar, energi, bersih, dll).');
-  }
-
-  const sanitized: PetData = {
-    id: parsed.id || `kitsune_${Date.now()}`,
-    name: parsed.name.slice(0, 20),
-    element: parsed.element || 'fire',
-    stage: parsed.stage || 'anak',
-    form: parsed.form || 'kogitsune',
-    tailCount: typeof parsed.tailCount === 'number' ? Math.max(0, Math.min(9, parsed.tailCount)) : 1,
-    stats: {
-      hunger: typeof parsed.stats?.hunger === 'number' ? Math.max(0, Math.min(100, parsed.stats.hunger)) : 80,
-      energy: typeof parsed.stats?.energy === 'number' ? Math.max(0, Math.min(100, parsed.stats.energy)) : 80,
-      cleanliness: typeof parsed.stats?.cleanliness === 'number' ? Math.max(0, Math.min(100, parsed.stats.cleanliness)) : 80,
-      happiness: typeof parsed.stats?.happiness === 'number' ? Math.max(0, Math.min(100, parsed.stats.happiness)) : 80,
-      discipline: typeof parsed.stats?.discipline === 'number' ? Math.max(0, Math.min(100, parsed.stats.discipline)) : 50,
-      health: typeof parsed.stats?.health === 'number' ? Math.max(0, Math.min(100, parsed.stats.health)) : 90,
-    },
-    weight: typeof parsed.weight === 'number' ? parsed.weight : 450,
-    ageDays: typeof parsed.ageDays === 'number' ? parsed.ageDays : 1,
-    exp: typeof parsed.exp === 'number' ? parsed.exp : 0,
-    level: typeof parsed.level === 'number' ? Math.max(1, parsed.level) : 1,
-    careScore: typeof parsed.careScore === 'number' ? Math.max(10, Math.min(100, parsed.careScore)) : 80,
-    careMistakes: typeof parsed.careMistakes === 'number' ? Math.max(0, parsed.careMistakes) : 0,
-    hankoSignature: parsed.hankoSignature || '福',
-    birthTimestamp: parsed.birthTimestamp || Date.now(),
-    lastInteractionTime: Date.now(),
-    lastDecayTime: Date.now(),
-    isSleeping: Boolean(parsed.isSleeping),
-    sleepUntilTimestamp: parsed.sleepUntilTimestamp,
-    isSick: Boolean(parsed.isSick),
-    poopCount: typeof parsed.poopCount === 'number' ? Math.max(0, Math.min(4, parsed.poopCount)) : 0,
-    coins: typeof parsed.coins === 'number' ? Math.max(0, parsed.coins) : 50,
-    inventory: parsed.inventory && typeof parsed.inventory === 'object' ? parsed.inventory : {},
-    favoriteFood: parsed.favoriteFood || 'Aburaage (Tahu Goreng Gurih)',
-    generation: typeof parsed.generation === 'number' ? Math.max(1, parsed.generation) : 1,
-    totalMiniGamesWon: typeof parsed.totalMiniGamesWon === 'number' ? parsed.totalMiniGamesWon : 0,
-    accessories: parsed.accessories || { neck: 'none', head: 'none' },
-    unlockedAccessories: Array.isArray(parsed.unlockedAccessories)
-      ? parsed.unlockedAccessories
-      : ['neck_none', 'head_none', 'head_leaf'],
-    sanctuaryDecor: parsed.sanctuaryDecor || DEFAULT_SANCTUARY_DECOR,
-    unlockedDecor: Array.isArray(parsed.unlockedDecor) ? parsed.unlockedDecor : DEFAULT_UNLOCKED_DECOR,
-    season: parsed.season || 'autumn',
-    unlockedMemories: Array.isArray(parsed.unlockedMemories) ? parsed.unlockedMemories : [],
-    customDiaryNotes: Array.isArray(parsed.customDiaryNotes) ? parsed.customDiaryNotes : [],
-    visitedShrines: Array.isArray(parsed.visitedShrines) ? parsed.visitedShrines : [],
-    hanabiLaunches: typeof parsed.hanabiLaunches === 'number' ? parsed.hanabiLaunches : 0,
-    caretakerName: parsed.caretakerName || 'Pengasuh',
-    shrineWishes: Array.isArray(parsed.shrineWishes) && parsed.shrineWishes.length > 0 ? parsed.shrineWishes : DEFAULT_SHRINE_WISHES,
-    bondingPoints: typeof parsed.bondingPoints === 'number' ? parsed.bondingPoints : 120,
-    bondingLevel: typeof parsed.bondingLevel === 'number' ? parsed.bondingLevel : 1,
-    bondingTitle: parsed.bondingTitle || 'Kenalan Kuil',
-  };
-
-  const bondInfo = getBondingLevelInfo(sanitized.bondingPoints ?? 120);
-  sanitized.bondingLevel = bondInfo.level;
-  sanitized.bondingTitle = bondInfo.currentMilestone.title;
-
-  return sanitized;
+  return result.pet;
 }
 
 export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({

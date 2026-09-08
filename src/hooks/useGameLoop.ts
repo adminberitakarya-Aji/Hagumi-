@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { PetData } from '../types/game';
 import {
-  DEFAULT_SANCTUARY_DECOR,
-  DEFAULT_UNLOCKED_DECOR,
-  DEFAULT_SHRINE_WISHES,
-  getBondingLevelInfo,
-} from '../data/gameConfig';
+  CORRUPT_SAVE_BACKUP_KEY,
+  parseAndMigratePetSave,
+  serializePetSave,
+} from '../utils/petSaveSchema';
 
 const STORAGE_KEY = 'HAGUMI_KITSUNE_SAVE_DATA';
 
@@ -15,14 +14,27 @@ export function useGameLoop() {
   const [offlineAwayMinutes, setOfflineAwayMinutes] = useState<number | null>(null);
   const [offlineCoins, setOfflineCoins] = useState<number>(0);
 
-  // 1. Initial Load from LocalStorage
+  // 1. Initial Load from LocalStorage (dengan schema migration & validasi)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed: PetData = JSON.parse(saved);
+        const result = parseAndMigratePetSave(saved);
+        if (!result.ok) {
+          // Save korup / dari schema lebih baru: JANGAN ditimpa diam-diam.
+          // Simpan salinan agar pemain/developer masih bisa memulihkannya manual.
+          console.error('Failed to load saved pet data:', result.error);
+          try {
+            localStorage.setItem(CORRUPT_SAVE_BACKUP_KEY, saved);
+          } catch {
+            /* kegagalan backup diabaikan — jangan blok proses load */
+          }
+          return;
+        }
+
+        const parsed = result.pet;
         const now = Date.now();
-        const elapsedMinutes = (now - (parsed.lastInteractionTime || now)) / (1000 * 60);
+        const elapsedMinutes = (now - parsed.lastInteractionTime) / (1000 * 60);
 
         // If player was away for more than 3 minutes, calculate gentle offline decay
         if (elapsedMinutes >= 3) {
@@ -33,7 +45,7 @@ export function useGameLoop() {
 
           parsed.stats.hunger = Math.max(15, parsed.stats.hunger - hungerLoss);
           parsed.stats.energy = Math.max(10, Math.min(100, parsed.stats.energy + energyRegen));
-          parsed.stats.cleanliness = Math.max(10, parsed.stats.cleanliness - cleanLoss);
+          parsed.stats.cleanliness = Math.max(10, Math.min(100, parsed.stats.cleanliness - cleanLoss));
 
           // Check if 15-minute sleep period completed while offline
           if (parsed.isSleeping && parsed.sleepUntilTimestamp && now >= parsed.sleepUntilTimestamp) {
@@ -59,34 +71,6 @@ export function useGameLoop() {
           setOfflineCoins(welcomeCoins);
         }
 
-        // Backward compatibility for accessories & sanctuary decor
-        if (!parsed.accessories) {
-          parsed.accessories = { neck: 'none', head: 'none' };
-        }
-        if (!parsed.unlockedAccessories) {
-          parsed.unlockedAccessories = ['neck_none', 'head_none', 'head_leaf'];
-        }
-        if (!parsed.sanctuaryDecor) {
-          parsed.sanctuaryDecor = DEFAULT_SANCTUARY_DECOR;
-        }
-        if (!parsed.unlockedDecor) {
-          parsed.unlockedDecor = DEFAULT_UNLOCKED_DECOR;
-        }
-
-        // Backward compatibility for Caretaker & Deep Bonding (Fase 5)
-        if (!parsed.caretakerName) {
-          parsed.caretakerName = 'Pengasuh';
-        }
-        if (!parsed.shrineWishes || parsed.shrineWishes.length === 0) {
-          parsed.shrineWishes = DEFAULT_SHRINE_WISHES;
-        }
-        if (parsed.bondingPoints === undefined) {
-          parsed.bondingPoints = 120;
-        }
-        const bondInfo = getBondingLevelInfo(parsed.bondingPoints);
-        parsed.bondingLevel = bondInfo.level;
-        parsed.bondingTitle = bondInfo.currentMilestone.title;
-
         setPet(parsed);
       }
     } catch (e) {
@@ -100,7 +84,7 @@ export function useGameLoop() {
   useEffect(() => {
     if (!isLoaded || !pet) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(pet));
+      localStorage.setItem(STORAGE_KEY, serializePetSave(pet));
     } catch (e) {
       console.error('Failed to save pet data:', e);
     }
