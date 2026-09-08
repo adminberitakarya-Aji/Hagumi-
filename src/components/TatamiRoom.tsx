@@ -23,23 +23,7 @@ import { useOdekakeFlow } from '../hooks/useOdekakeFlow';
 import { useCareActions } from '../hooks/useCareActions';
 import { ELEMENTS_CONFIG, getRequiredExp, addPetExp, getBondingLevelInfo } from '../data/gameConfig';
 import { KitsuneCanvas } from './KitsuneCanvas';
-import { BentoFoodModal } from './BentoFoodModal';
-import { OnsenBathModal } from './OnsenBathModal';
-import { FutonBedroomModal } from './FutonBedroomModal';
-import { TanukiShopModal } from './TanukiShopModal';
-import { ShrineModal } from './ShrineModal';
-import { MatsuriGamesModal } from './MatsuriGamesModal';
-import { HankoAlbumModal } from './HankoAlbumModal';
-import { WardrobeModal } from './WardrobeModal';
-import { SanctuaryDecorModal } from './SanctuaryDecorModal';
-import { MemoryScrollModal } from './MemoryScrollModal';
-import { ShrinePassModal } from './ShrinePassModal';
-import { HanabiMakerModal } from './HanabiMakerModal';
 import { SanctuaryMenuModal } from './SanctuaryMenuModal';
-import { BackupRestoreModal } from './BackupRestoreModal';
-import { OdekakeModal } from './OdekakeModal';
-import { OdekakeReturnModal } from './OdekakeReturnModal';
-import { ZenGardenModal } from './ZenGardenModal';
 import { SeasonParticles } from './SeasonParticles';
 import { SeasonSwitcherPanel } from './SeasonSwitcherPanel';
 import { TatamiSanctuaryBackground } from './TatamiSanctuaryBackground';
@@ -49,19 +33,18 @@ import { useAmbient } from '../hooks/useAmbient';
 import { useAudioHaptic } from '../hooks/useAudioHaptic';
 import { useCountdown, formatCountdown } from '../hooks/useTimers';
 import { SensuFanHUD, SensuItem } from './SensuFanHUD';
-import { DialogA11yWrapper } from '../hooks/useDialogA11y';
 import { SleepConfirmDialog } from './tatami/SleepConfirmDialog';
 import { ResetConfirmDialog } from './tatami/ResetConfirmDialog';
+import { ModalLayer } from './tatami/ModalLayer';
+import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
 import { MODAL_LABELS, type ModalKind } from './tatami/modalRegistry';
 
 // Registry modal dipindah ke src/components/tatami/modalRegistry.ts —
 // re-export dipertahankan agar jalur import lama tetap berfungsi.
 export { MODAL_LABELS };
 export type { ModalKind };
-import { HapticSettingsModal } from './HapticSettingsModal';
 import { ParallaxSettingsModal } from './ParallaxSettingsModal';
 import { useParallax2D } from '../utils/useParallax2D';
-import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
@@ -1562,309 +1545,38 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         }}
       />
 
-      {/* MODALS & FULLSCREEN SANCTUARY ROOMS
-          (satu state activeModal → satu dialog aktif; dibungkus role="dialog"
-           + focus trap + Esc + restorasi fokus via DialogA11yWrapper) */}
-      <DialogA11yWrapper
-        isActive={activeModal !== null}
-        onClose={() => setActiveModal(null)}
-        label={activeModal ? MODAL_LABELS[activeModal] : 'Dialog Santuari'}
-      >
-      <BentoFoodModal
-        isOpen={activeModal === 'bento'}
-        onClose={() => setActiveModal(null)}
-        inventory={pet.inventory}
-        onFeedItem={handleFeedItem}
-        onOpenShop={() => setActiveModal('shop')}
-        hunger={pet.stats.hunger}
-        happiness={pet.stats.happiness}
-        petName={pet.name}
-        coins={pet.coins}
-        pet={pet}
-        onFinishDining={() => {
-          setActiveModal(null);
-          soundEngine.playChime();
-          hapticEngine.heavy();
-          showToast(`🙏 Gochisousama! ${pet.name} kenyang dan puas bersantap di Meja Bento!`);
-        }}
-      />
-
-      {/* Onsen Bath Sanctuary Scene */}
-      <OnsenBathModal
-        isOpen={activeModal === 'bath'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        onFinishBath={handleFinishBath}
-      />
-
-      {/* Futon Bedroom Sanctuary Scene */}
-      <FutonBedroomModal
-        isOpen={activeModal === 'bedroom'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        onWakeUp={handleWakeUpFromBedroom}
-        onOpenShop={() => setActiveModal('shop')}
-      />
-
-      <TanukiShopModal
-        isOpen={activeModal === 'shop'}
-        onClose={() => setActiveModal(null)}
-        coins={pet.coins}
-        inventory={pet.inventory}
-        onBuyItem={handleBuyItem}
-        onOpenWardrobe={() => setActiveModal('wardrobe')}
-      />
-
-      <ShrineModal
-        isOpen={activeModal === 'shrine'}
-        onClose={() => setActiveModal(null)}
+      {/* MODALS & FULLSCREEN SANCTUARY ROOMS — diekstrak ke tatami/ModalLayer.tsx */}
+      <ModalLayer
         pet={pet}
         setPet={setPet}
+        activeModal={activeModal}
+        setActiveModal={setActiveModal}
+        triggerShoji={triggerShoji}
         showToast={showToast}
-        onOmikujiDrawn={handleOmikujiDrawn}
-      />
-
-      <MatsuriGamesModal
-        isOpen={activeModal === 'matsuri'}
-        onClose={() => setActiveModal(null)}
-        onReward={handleGameReward}
-      />
-
-      <HankoAlbumModal
-        isOpen={activeModal === 'hanko'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        onResetPet={handleRequestReset}
-      />
-
-      <WardrobeModal
-        isOpen={activeModal === 'wardrobe'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        setPet={setPet}
-        showToast={showToast}
-      />
-
-      <SanctuaryDecorModal
-        isOpen={activeModal === 'decor'}
-        onClose={() => setActiveModal(null)}
-        currentDecor={pet.sanctuaryDecor || DEFAULT_SANCTUARY_DECOR}
-        coins={pet.coins}
-        petLevel={pet.level}
-        unlockedDecor={pet.unlockedDecor || DEFAULT_UNLOCKED_DECOR}
-        onUpdateDecor={(newDecor) => {
-          setPet((prev) => ({
-            ...prev,
-            sanctuaryDecor: newDecor,
-          }));
-          showToast('🏡 Dekorasi Ruangan Sanctuary Diperbarui!');
-        }}
-        onBuyDecor={(item) => {
-          setPet((prev) => ({
-            ...prev,
-            coins: Math.max(0, prev.coins - item.price),
-            unlockedDecor: [...(prev.unlockedDecor || DEFAULT_UNLOCKED_DECOR), item.id],
-          }));
-          showToast(`Membeli dekorasi: ${item.name}! (+${item.blessingText})`);
-        }}
-      />
-
-      {/* Buku Harian Roh (Memory Scroll & Ukiyo-e Album) Modal */}
-      <MemoryScrollModal
-        isOpen={activeModal === 'memoryScroll'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        onAddDiaryNote={handleAddDiaryNote}
-        onDeleteDiaryNote={handleDeleteDiaryNote}
-      />
-
-      {/* Paspor Kuil & Pertukaran Ziarah (Shrine Pass) Modal */}
-      <ShrinePassModal
-        isOpen={activeModal === 'shrinePass'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
         visitedShrines={visitedShrines}
         setVisitedShrines={setVisitedShrines}
-        onReceivePilgrimageBlessing={handleReceivePilgrimageBlessing}
-      />
-
-      {/* Pengrajin Kembang Api Tradisional (Hanabi Maker) Mini-Game Modal */}
-      <HanabiMakerModal
-        isOpen={activeModal === 'hanabi'}
-        onClose={() => setActiveModal(null)}
-        onLaunchSuccess={handleHanabiSuccess}
-      />
-
-      {/* Pengaturan Umpan Balik Taktil (Haptic Feedback) Modal */}
-      <HapticSettingsModal
-        isOpen={activeModal === 'haptic'}
-        onClose={() => setActiveModal(null)}
-      />
-
-      {/* Menu Fitur Santuari Tradisional Modal */}
-      <SanctuaryMenuModal
-        isOpen={activeModal === 'sanctuaryMenu'}
-        onClose={() => setActiveModal(null)}
+        bondInfo={bondInfo}
+        season={season}
         onOpenPrologue={onOpenPrologue}
-        onOpenHanko={() => {
-          triggerShoji({
-            label: 'Kitab Segel Hanko',
-            kanji: '📜 印',
-            sublabel: 'Arsip Silsilah Roh Kitsune',
-            onMidpoint: () => setActiveModal('hanko'),
-          });
-        }}
-        onOpenMemoryScroll={() => {
-          triggerShoji({
-            label: 'Gulungan Memori Emakimono',
-            kanji: '📖 記',
-            sublabel: 'Album Ukiyo-e & Catatan Kenangan',
-            onMidpoint: () => setActiveModal('memoryScroll'),
-          });
-        }}
-        onOpenShrinePass={() => {
-          triggerShoji({
-            label: 'Paspor Ziarah Inari',
-            kanji: '⛩️ 通',
-            sublabel: 'Ziarah Kuil Teman & Tukar Berkah',
-            onMidpoint: () => setActiveModal('shrinePass'),
-          });
-        }}
-        onOpenHanabi={() => {
-          triggerShoji({
-            label: 'Pesta Kembang Api Hanabi',
-            kanji: '🎆 火',
-            sublabel: 'Hanabi Taikai • Langit Festival',
-            onMidpoint: () => setActiveModal('hanabi'),
-          });
-        }}
-        onOpenDecor={() => {
-          triggerShoji({
-            label: 'Renovasi Sanctuary Tatami',
-            kanji: '🏡 館',
-            sublabel: 'Tatami, Altar & Kakemono',
-            onMidpoint: () => setActiveModal('decor'),
-          });
-        }}
-        onOpenHaptic={() => {
-          setActiveModal('haptic');
-        }}
-        onOpenParallax={() => {
-          setActiveModal('parallax');
-        }}
-        onOpenWardrobe={() => {
-          triggerShoji({
-            label: 'Lemari Busana Miyabi',
-            kanji: '👘 衣',
-            sublabel: 'Kimono & Aksesoris Roh Kitsune',
-            onMidpoint: () => setActiveModal('wardrobe'),
-          });
-        }}
-        onTriggerShoji={() => {
-          triggerShoji({
-            label: 'Gerbang Pintu Shoji',
-            kanji: '🚪 障',
-            sublabel: 'Transisi Layar Tradisional Fusuma',
-            onMidpoint: () => {
-              showToast('🚪 Pintu Shoji bergeser membuka santuari...');
-            },
-          });
-        }}
-        onOpenShop={() => {
-          triggerShoji({
-            label: 'Toko Serba Ada Tanuki',
-            kanji: '🏪 店',
-            sublabel: 'Minimarket Modern Istana Rubah',
-            onMidpoint: () => setActiveModal('shop'),
-          });
-        }}
-        onOpenShrine={() => {
-          triggerShoji({
-            label: 'Kuil Inari Okami',
-            kanji: '⛩️ 縁',
-            sublabel: `Ikatan Batin Lv.${bondInfo.level} • ${bondInfo.currentMilestone.title}`,
-            onMidpoint: () => setActiveModal('shrine'),
-          });
-        }}
-        onOpenBackupRestore={() => {
-          setActiveModal('backupRestore');
-        }}
-        onOpenOdekake={() => {
-          setActiveModal('odekake');
-        }}
-        onOpenZenGarden={() => {
-          setActiveModal('zenGarden');
-        }}
-        onCycleSeason={handleCycleSeason}
-        currentSeason={season}
+        handleCycleSeason={handleCycleSeason}
+        handleFeedItem={handleFeedItem}
+        handleFinishBath={handleFinishBath}
+        handleWakeUpFromBedroom={handleWakeUpFromBedroom}
+        handleBuyItem={handleBuyItem}
+        handleOmikujiDrawn={handleOmikujiDrawn}
+        handleGameReward={handleGameReward}
+        handleHanabiSuccess={handleHanabiSuccess}
+        handleReceivePilgrimageBlessing={handleReceivePilgrimageBlessing}
+        handleAddDiaryNote={handleAddDiaryNote}
+        handleDeleteDiaryNote={handleDeleteDiaryNote}
+        handleRequestReset={handleRequestReset}
+        handleConfirmSleep={handleConfirmSleep}
+        handleDepartOdekake={handleDepartOdekake}
+        handleRecallEarlyOdekake={handleRecallEarlyOdekake}
+        handleClaimOdekakeReward={handleClaimOdekakeReward}
+        completedTripToCelebrate={completedTripToCelebrate}
+        parallax={parallax}
       />
-
-      {/* Petualangan Berkelana Roh (O-dekake / Tabi) Modal */}
-      <OdekakeModal
-        isOpen={activeModal === 'odekake'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        onDepart={handleDepartOdekake}
-        onRecallEarly={handleRecallEarlyOdekake}
-        showToast={showToast}
-      />
-
-      {/* Sambutan Kepulangan Berkelana (Odekake Return) Modal */}
-      {completedTripToCelebrate && (
-        <OdekakeReturnModal
-          isOpen={true}
-          onClose={handleClaimOdekakeReward}
-          petName={pet.name}
-          destinationName={completedTripToCelebrate.destinationName}
-          destinationKanji={completedTripToCelebrate.destinationKanji}
-          reward={completedTripToCelebrate.reward}
-          onClaim={handleClaimOdekakeReward}
-        />
-      )}
-
-      {/* Taman Zen & Kolam Ikan Koi (Engawa Karesansui) Modal */}
-      <ZenGardenModal
-        isOpen={activeModal === 'zenGarden'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        setPet={setPet}
-        showToast={showToast}
-      />
-
-      {/* Cadangan & Pemulihan Santuari (Backup & Restore) Modal */}
-      <BackupRestoreModal
-        isOpen={activeModal === 'backupRestore'}
-        onClose={() => setActiveModal(null)}
-        pet={pet}
-        onRestore={(restoredPet) => {
-          setPet(restoredPet);
-          showToast(`⛩️ Segel Santuari Berhasil Dipulihkan: ${restoredPet.name}!`);
-        }}
-        showToast={showToast}
-      />
-
-      {/* Sensasi Kedalaman Parallax 2.5D Settings Modal */}
-      <ParallaxSettingsModal
-        isOpen={activeModal === 'parallax'}
-        onClose={() => setActiveModal(null)}
-        mode={parallax.mode}
-        onSetMode={parallax.setMode}
-        x={parallax.x}
-        y={parallax.y}
-        hasGyroscope={parallax.hasGyroscope}
-        isGyroActive={parallax.isGyroActive}
-        onRequestGyroPermission={parallax.requestGyroPermission}
-      />
-
-      {/* DIALOG KONFIRMASI TIDUR 15 MENIT */}
-      {activeModal === 'sleepConfirm' && (
-        <SleepConfirmDialog
-          petName={pet.name}
-          onConfirm={handleConfirmSleep}
-          onCancel={() => setActiveModal(null)}
-        />
-      )}
-      </DialogA11yWrapper>
 
       {/* DIALOG KONFIRMASI MULAI GENERASI BARU (Reset Pet — destruktif permanen) */}
       {isResetConfirmOpen && (
