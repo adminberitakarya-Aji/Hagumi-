@@ -1,7 +1,8 @@
 {
-  "name": "react-example",
+  "name": "hagumi",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Virtual pet Kitsune — merawat dan mengevolusikan roh rubah suci di santuari tatami tradisional Jepang.",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
