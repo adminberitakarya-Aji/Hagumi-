@@ -43,6 +43,21 @@ export const KitsuneCanvas: React.FC<KitsuneCanvasProps> = ({
     thoughtBox: null as null | { x: number; y: number; w: number; h: number },
   });
 
+  // Live refs untuk data yang dibutuhkan animation loop.
+  // Disimpan di ref agar RAF loop utama (mount-once) tidak perlu teardown/rebuild
+  // setiap kali decay loop di useGameLoop (tiap 10 detik) mengganti objek `pet` —
+  // variabel `tick` animasi pun tidak pernah ter-reset (fix glitch fase animasi).
+  const petRef = useRef(pet);
+  const actionStateRef = useRef(actionState);
+  const eggCrackCountRef = useRef(eggCrackCount);
+
+  // Sync refs tanpa memicu re-run effect animasi (hanya assignment murah).
+  useEffect(() => {
+    petRef.current = pet;
+    actionStateRef.current = actionState;
+    eggCrackCountRef.current = eggCrackCount;
+  }, [pet, actionState, eggCrackCount]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -52,11 +67,16 @@ export const KitsuneCanvas: React.FC<KitsuneCanvasProps> = ({
     let animationFrameId: number;
     let tick = 0;
 
-    const elementInfo = ELEMENTS_CONFIG[pet.element] || ELEMENTS_CONFIG.fire;
-
     const render = () => {
       tick++;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Snapshot nilai terkini dari refs (bukan closure prop) agar loop
+      // mount-once tetap bereaksi terhadap perubahan pet/state tiap frame.
+      const pet = petRef.current;
+      const actionState = actionStateRef.current;
+      const eggCrackCount = eggCrackCountRef.current;
+      const elementInfo = ELEMENTS_CONFIG[pet.element] || ELEMENTS_CONFIG.fire;
 
       const p = posRef.current;
 
@@ -242,7 +262,9 @@ export const KitsuneCanvas: React.FC<KitsuneCanvasProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [pet, actionState, eggCrackCount]);
+    // Mount-once: loop membaca data terkini dari refs di setiap frame,
+    // sehingga tidak perlu teardown/rebuild saat decay loop mengganti `pet`.
+  }, []);
 
   // Handle click on canvas: check thought bubble first, then pet movement
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
