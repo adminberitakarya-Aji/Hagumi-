@@ -18,7 +18,9 @@ import {
   Trash2,
   Flame,
 } from 'lucide-react';
-import { PetData, DayPhase, FoodItem, SeasonType, OdekakeTrip, OdekakeReward } from '../types/game';
+import { PetData, DayPhase, FoodItem, SeasonType } from '../types/game';
+import { useOdekakeFlow } from '../hooks/useOdekakeFlow';
+import { useCareActions } from '../hooks/useCareActions';
 import { ELEMENTS_CONFIG, getRequiredExp, addPetExp, getBondingLevelInfo } from '../data/gameConfig';
 import { KitsuneCanvas } from './KitsuneCanvas';
 import { BentoFoodModal } from './BentoFoodModal';
@@ -70,11 +72,6 @@ interface TatamiRoomProps {
   onOpenPrologue?: () => void;
 }
 
-/** Semua jenis modal yang bisa dibuka di TatamiRoom (satu aktif pada satu waktu). */
-
-/** Label dialog yang ramah pembaca layar untuk setiap ModalKind. */
-};
-
 export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   pet,
   setPet,
@@ -95,34 +92,10 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       ? 'bedroom'
       : null
   );
-  const [completedTripToCelebrate, setCompletedTripToCelebrate] = useState<{
-    destinationName: string;
-    destinationKanji: string;
-    reward: OdekakeReward;
-  } | null>(null);
-
   // Sleep 15-minute countdown (target timestamp; null saat tidak tidur)
   const sleepRemainingSeconds = useCountdown(
     pet.isSleeping && pet.sleepUntilTimestamp ? pet.sleepUntilTimestamp : null
   );
-
-  // Odekake live countdown (target = startedAt + durationMs; null saat tidak berkelana)
-  const odekakeRemainingSeconds = useCountdown(
-    pet.activeOdekake ? pet.activeOdekake.startedAt + pet.activeOdekake.durationMs : null
-  );
-
-  // Jika durasi perjalanan sudah habis, selesaikan perjalanan dan sambut kepulangan Kitsune!
-  useEffect(() => {
-    if (pet.activeOdekake && odekakeRemainingSeconds <= 0 && !completedTripToCelebrate) {
-      soundEngine.playOdekakeReturn();
-      hapticEngine.evolution();
-      setCompletedTripToCelebrate({
-        destinationName: pet.activeOdekake.destinationName,
-        destinationKanji: pet.activeOdekake.destinationKanji,
-        reward: pet.activeOdekake.reward,
-      });
-    }
-  }, [pet.activeOdekake, odekakeRemainingSeconds, completedTripToCelebrate]);
 
   // Parallax 2.5D Depth Engine (Cursor and Gyroscope sensor tracking)
   const parallax = useParallax2D();
@@ -301,46 +274,38 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     onResetPet();
   };
 
-  // Pet action: Petting the Kitsune (+5 EXP)
-  const handlePetClick = () => {
-    soundEngine.playFoxChirp();
-    hapticEngine.petPurr();
-    setActionState('happy');
+  // Cluster logika Odekake diekstrak ke src/hooks/useOdekakeFlow.ts (Mid-Term #4)
+  const {
+    completedTripToCelebrate,
+    odekakeRemainingSeconds,
+    handleOdekakeActivityBlocked,
+    handleDepartOdekake,
+    handleRecallEarlyOdekake,
+    handleClaimOdekakeReward,
+  } = useOdekakeFlow({ pet, setPet, showToast, closeModal: () => setActiveModal(null) });
 
-    const expGain = 5;
-    const expRes = addPetExp(pet.exp, pet.level, expGain);
-
-    if (expRes.leveledUp) {
-      soundEngine.playEvolutionFanfare();
-      hapticEngine.evolution();
-      showToast(`🎉 Level Up! ${pet.name} kini mencapai Level ${expRes.newLevel}! (+${expGain} EXP)`);
-    } else {
-      showToast(`*Kon!* ${pet.name} merasa disayangi! (+3 Bahagia, +${expGain} EXP)`);
-    }
-
-    setPet((prev) => {
-      const res = addPetExp(prev.exp, prev.level, expGain);
-      const newBondingPts = (prev.bondingPoints ?? 120) + 2;
-      const bondInfo = getBondingLevelInfo(newBondingPts);
-
-      return {
-        ...prev,
-        stats: {
-          ...prev.stats,
-          happiness: Math.min(100, prev.stats.happiness + 3),
-        },
-        bondingPoints: newBondingPts,
-        bondingLevel: bondInfo.level,
-        bondingTitle: bondInfo.currentMilestone.title,
-        exp: res.newExp,
-        level: res.newLevel,
-        lastInteractionTime: Date.now(),
-      };
-    });
-
-    setTimeout(() => setActionState('idle'), 1800);
-  };
-
+  // Cluster aksi perawatan diekstrak ke src/hooks/useCareActions.ts (Mid-Term #4)
+  const {
+    handlePetClick,
+    handleFeedItem,
+    handleOpenBathScene,
+    handleFinishBath,
+    handleOpenBedroomScene,
+    handleWakeUpFromBedroom,
+    handleSleepingActivityBlocked,
+    handleConfirmSleep,
+    handleSleepButtonClick,
+    handleCleanAndBath,
+    handleToggleSleep,
+  } = useCareActions({
+    pet,
+    setPet,
+    showToast,
+    setActiveModal,
+    triggerShoji,
+    setActionState,
+    setIsLanternOn,
+  });
   // Idle Thought Bubble tap → open the suggested modal
   const handleThoughtClick = (thoughtType: string, _thoughtText: string) => {
     soundEngine.playSuzuChime();
@@ -397,381 +362,6 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     hapticEngine.tap();
 
     handlePetClick();
-  };
-
-  // Feeding item (Dynamic EXP based on item)
-  const handleFeedItem = (item: FoodItem) => {
-    soundEngine.playFeed();
-    hapticEngine.medium();
-    setActionState('eating');
-
-    const isFavorite =
-      item.id === pet.favoriteFood ||
-      (pet.favoriteFood === 'aburaage' && (item.id === 'aburaage' || item.id === 'inari'));
-    const bondingGain = isFavorite ? 15 : 4;
-
-    const expGain = item.exp || 15;
-    const expRes = addPetExp(pet.exp, pet.level, expGain);
-
-    if (expRes.leveledUp) {
-      soundEngine.playEvolutionFanfare();
-      hapticEngine.evolution();
-      showToast(`🎉 Level Up! ${pet.name} mencapai Level ${expRes.newLevel} berkat ${item.name}!`);
-    } else if (isFavorite) {
-      soundEngine.playChime();
-      hapticEngine.heavy();
-      showToast(`💖 Makanan Kesukaan Roh! ${pet.name} bersuka cita! (+15 Poin Ikatan Batin, +${expGain} EXP)`);
-    } else {
-      showToast(`Kamu menyuapkan ${item.name} ke ${pet.name}! (+${item.hunger} Kenyang, +${bondingGain} Ikatan)`);
-    }
-
-    setPet((prev) => {
-      const currentCount = prev.inventory[item.id] || 0;
-      const updatedInv = { ...prev.inventory };
-      if (currentCount > 1) {
-        updatedInv[item.id] = currentCount - 1;
-      } else {
-        delete updatedInv[item.id];
-      }
-
-      const newHunger = Math.min(100, prev.stats.hunger + item.hunger);
-      const newHappiness = Math.min(100, prev.stats.happiness + item.happiness);
-      const newEnergy = Math.min(100, prev.stats.energy + (item.energy || 0));
-      const newHealth = item.curesSickness
-        ? Math.min(100, prev.stats.health + (item.health || 40))
-        : prev.stats.health;
-      const curesSick = item.curesSickness ? false : prev.isSick;
-
-      const res = addPetExp(prev.exp, prev.level, expGain);
-      const newBondingPts = (prev.bondingPoints ?? 120) + bondingGain;
-      const bondInfo = getBondingLevelInfo(newBondingPts);
-
-      return {
-        ...prev,
-        inventory: updatedInv,
-        stats: {
-          ...prev.stats,
-          hunger: newHunger,
-          happiness: newHappiness,
-          energy: newEnergy,
-          health: newHealth,
-        },
-        bondingPoints: newBondingPts,
-        bondingLevel: bondInfo.level,
-        bondingTitle: bondInfo.currentMilestone.title,
-        isSick: curesSick,
-        weight: prev.weight + 15,
-        exp: res.newExp,
-        level: res.newLevel,
-        lastInteractionTime: Date.now(),
-      };
-    });
-
-    setTimeout(() => setActionState('idle'), 2200);
-  };
-
-  // Open Onsen Bath Sanctuary
-  const handleOpenBathScene = () => {
-    triggerShoji({
-      label: 'Pemandian Onsen Hinoki',
-      kanji: '🛁 湯',
-      sublabel: 'Kolam Air Hangat & Busa Melati',
-      onMidpoint: () => setActiveModal('bath'),
-    });
-  };
-
-  // Complete Bathing from Onsen Scene
-  const handleFinishBath = (expGain: number, happinessGain: number) => {
-    const expRes = addPetExp(pet.exp, pet.level, expGain);
-    if (expRes.leveledUp) {
-      soundEngine.playEvolutionFanfare();
-      hapticEngine.evolution();
-      showToast(`🎉 Level Up! Mandi air hangat menyegarkan! ${pet.name} naik ke Level ${expRes.newLevel}!`);
-    } else {
-      showToast(`✨ ${pet.name} segar berseri setelah berendam di Hinoki Ofuro! (+${expGain} EXP)`);
-    }
-
-    setPet((prev) => {
-      const res = addPetExp(prev.exp, prev.level, expGain);
-      return {
-        ...prev,
-        poopCount: 0,
-        stats: {
-          ...prev.stats,
-          cleanliness: 100,
-          happiness: Math.min(100, prev.stats.happiness + happinessGain),
-        },
-        exp: res.newExp,
-        level: res.newLevel,
-        lastInteractionTime: Date.now(),
-      };
-    });
-  };
-
-  // Open Futon Bedroom Sanctuary
-  const handleOpenBedroomScene = () => {
-    triggerShoji({
-      label: 'Kamar Peraduan Futon',
-      kanji: '🛏️ 眠',
-      sublabel: 'Peristirahatan Futon & Selimut Sutra',
-      onMidpoint: () => {
-        setIsLanternOn(false);
-        setActiveModal('bedroom');
-      },
-    });
-  };
-
-  // Complete Sleeping / Wake up from Bedroom Scene
-  const handleWakeUpFromBedroom = (energyGain: number, expGain: number) => {
-    setIsLanternOn(true);
-    const expRes = addPetExp(pet.exp, pet.level, expGain);
-    if (expRes.leveledUp) {
-      soundEngine.playEvolutionFanfare();
-      hapticEngine.evolution();
-      showToast(`🎉 ${pet.name} bangun tidur dengan segar dan naik ke Level ${expRes.newLevel}!`);
-    } else {
-      showToast(`☀️ ${pet.name} terbangun dengan bugar dan siap bermain! (+${Math.round(energyGain)} Energi, +${expGain} EXP)`);
-    }
-
-    setPet((prev) => {
-      const res = addPetExp(prev.exp, prev.level, expGain);
-      return {
-        ...prev,
-        isSleeping: false,
-        sleepUntilTimestamp: undefined,
-        stats: {
-          ...prev.stats,
-          energy: Math.min(100, prev.stats.energy + energyGain),
-        },
-        exp: res.newExp,
-        level: res.newLevel,
-        lastInteractionTime: Date.now(),
-      };
-    });
-  };
-
-  // Helper when clicking blocked activities while sleeping
-  const handleSleepingActivityBlocked = (activityName: string) => {
-    soundEngine.playFoxChirp();
-    hapticEngine.softTap();
-    showToast(`Shhh... ${pet.name} sedang tidur lelap (Zzz...). Menu ${activityName} istirahat sejenak hingga bangun.`);
-  };
-
-  // Helper when clicking blocked activities while on Odekake journey
-  const handleOdekakeActivityBlocked = (activityName: string) => {
-    soundEngine.playFoxChirp();
-    hapticEngine.softTap();
-    showToast(`🎒 ${pet.name} sedang berkelana di ${pet.activeOdekake?.destinationName}... Menu ${activityName} menunggu hingga Kitsune kembali!`);
-  };
-
-  // Depart on Odekake journey
-  const handleDepartOdekake = (trip: OdekakeTrip, totalCost: number) => {
-    setPet((prev) => ({
-      ...prev,
-      coins: Math.max(0, prev.coins - totalCost),
-      activeOdekake: trip,
-      lastInteractionTime: Date.now(),
-    }));
-  };
-
-  // Early recall from Odekake (Kitsunebi return)
-  const handleRecallEarlyOdekake = () => {
-    if (!pet.activeOdekake) return;
-    const partialCoins = Math.max(10, Math.round(pet.activeOdekake.reward.coins * 0.5));
-    const partialExp = Math.max(10, Math.round(pet.activeOdekake.reward.exp * 0.5));
-    const expRes = addPetExp(pet.exp, pet.level, partialExp);
-
-    setPet((prev) => {
-      const res = addPetExp(prev.exp, prev.level, partialExp);
-      return {
-        ...prev,
-        coins: prev.coins + partialCoins,
-        exp: res.newExp,
-        level: res.newLevel,
-        activeOdekake: undefined,
-        completedOdekakes: (prev.completedOdekakes || 0) + 1,
-        lastInteractionTime: Date.now(),
-      };
-    });
-
-    setActiveModal(null);
-    showToast(`✨ Kitsunebi Return! ${pet.name} kembali pulang membawa ${partialCoins} Ryo & ${partialExp} EXP!`);
-  };
-
-  // Claim Completed Odekake Reward
-  const handleClaimOdekakeReward = () => {
-    if (!completedTripToCelebrate) return;
-    const { reward } = completedTripToCelebrate;
-    const expRes = addPetExp(pet.exp, pet.level, reward.exp);
-
-    setPet((prev) => {
-      const res = addPetExp(prev.exp, prev.level, reward.exp);
-      const updatedPostcards = [...(prev.unlockedPostcards || [])];
-      if (reward.postcardId && !updatedPostcards.includes(reward.postcardId)) {
-        updatedPostcards.push(reward.postcardId);
-      }
-
-      const updatedSeeds = [...(prev.unlockedSeeds || [])];
-      if (reward.seedName && !updatedSeeds.includes(reward.seedName)) {
-        updatedSeeds.push(reward.seedName);
-      }
-
-      return {
-        ...prev,
-        coins: prev.coins + reward.coins,
-        exp: res.newExp,
-        level: res.newLevel,
-        bondingPoints: (prev.bondingPoints || 0) + reward.bondingPoints,
-        activeOdekake: undefined,
-        completedOdekakes: (prev.completedOdekakes || 0) + 1,
-        unlockedPostcards: updatedPostcards,
-        unlockedSeeds: updatedSeeds,
-        stats: {
-          ...prev.stats,
-          happiness: Math.min(100, prev.stats.happiness + 20),
-        },
-        lastInteractionTime: Date.now(),
-      };
-    });
-
-    setCompletedTripToCelebrate(null);
-    if (expRes.leveledUp) {
-      soundEngine.playEvolutionFanfare();
-      showToast(`🎉 Level Up! Oleh-oleh perjalanan membuat ${pet.name} naik ke Level ${expRes.newLevel}!`);
-    } else {
-      showToast(`🎴 Oleh-oleh berhasil disimpan ke Album! +${reward.coins} Ryo, +${reward.exp} EXP & +${reward.bondingPoints} Kizuna!`);
-    }
-  };
-
-  // Confirm Sleep for 15 minutes & automatically open Bedroom Scene
-  const handleConfirmSleep = () => {
-    setActiveModal(null);
-    soundEngine.playSleepChime();
-    hapticEngine.heavy();
-
-    const sleepDurationMs = 15 * 60 * 1000; // 15 Menit
-    const target = Date.now() + sleepDurationMs;
-
-    setIsLanternOn(false);
-    setActionState('sleeping');
-    showToast(`🌙 ${pet.name} mulai tidur lelap selama 15 menit... Toko Tanuki tetap buka!`);
-
-    setPet((prev) => ({
-      ...prev,
-      isSleeping: true,
-      sleepUntilTimestamp: target,
-      lastInteractionTime: Date.now(),
-    }));
-
-    // Otomatis beralih ke latar Kamar Tidur Futon (Bedroom Scene) dengan transisi Shoji halus
-    triggerShoji({
-      label: 'Kamar Peraduan Futon',
-      kanji: '🛏️ 眠',
-      sublabel: `Peristirahatan Kasur Futon • ${pet.name}`,
-      onMidpoint: () => {
-        setActiveModal('bedroom');
-      },
-    });
-  };
-
-  // Sleeping button action (from dock or menu)
-  const handleSleepButtonClick = () => {
-    if (pet.isSleeping) {
-      handleOpenBedroomScene();
-    } else {
-      setActiveModal('sleepConfirm');
-    }
-  };
-
-  // Bathing & Cleaning Poop quick on tatami floor (+20 EXP for cleaning poop)
-  const handleCleanAndBath = () => {
-    soundEngine.playBath();
-    hapticEngine.medium();
-    const hadPoop = pet.poopCount > 0;
-    if (hadPoop) {
-      soundEngine.playSweep();
-    }
-    setActionState('bathing');
-
-    const expGain = hadPoop ? 20 : 12;
-    const expRes = addPetExp(pet.exp, pet.level, expGain);
-
-    if (expRes.leveledUp) {
-      soundEngine.playEvolutionFanfare();
-      hapticEngine.evolution();
-      showToast(`🎉 Level Up! Pelataran bersih membawa berkah! ${pet.name} naik ke Level ${expRes.newLevel}!`);
-    } else {
-      showToast(
-        hadPoop
-          ? `Menyapu pelataran tatami & memandikan ${pet.name} dengan air hangat! (+${expGain} EXP)`
-          : `Memandikan ${pet.name} dengan busa wangi melati! (+${expGain} EXP)`
-      );
-    }
-
-    setPet((prev) => {
-      const res = addPetExp(prev.exp, prev.level, expGain);
-      return {
-        ...prev,
-        poopCount: 0,
-        stats: {
-          ...prev.stats,
-          cleanliness: 100,
-          happiness: Math.min(100, prev.stats.happiness + 10),
-        },
-        exp: res.newExp,
-        level: res.newLevel,
-        lastInteractionTime: Date.now(),
-      };
-    });
-
-    setTimeout(() => setActionState('idle'), 2400);
-  };
-
-  // Sleeping toggle
-  const handleToggleSleep = () => {
-    soundEngine.playSleepChime();
-    hapticEngine.heavy();
-    const willSleep = !pet.isSleeping;
-
-    if (willSleep) {
-      setIsLanternOn(false);
-      setActionState('sleeping');
-      showToast(`${pet.name} bergelung tidur di atas futon hangat... Zzz`);
-
-      setPet((prev) => ({
-        ...prev,
-        isSleeping: true,
-        lastInteractionTime: Date.now(),
-      }));
-    } else {
-      setIsLanternOn(true);
-      setActionState('idle');
-      const expGain = 10;
-      const expRes = addPetExp(pet.exp, pet.level, expGain);
-
-      if (expRes.leveledUp) {
-        soundEngine.playEvolutionFanfare();
-        hapticEngine.evolution();
-        showToast(`🎉 ${pet.name} bangun tidur dengan segar dan naik ke Level ${expRes.newLevel}!`);
-      } else {
-        showToast(`${pet.name} terbangun dengan bugar! (+35 Energi, +${expGain} EXP)`);
-      }
-
-      setPet((prev) => {
-        const res = addPetExp(prev.exp, prev.level, expGain);
-        return {
-          ...prev,
-          isSleeping: false,
-          stats: {
-            ...prev.stats,
-            energy: Math.min(100, prev.stats.energy + 35),
-          },
-          exp: res.newExp,
-          level: res.newLevel,
-          lastInteractionTime: Date.now(),
-        };
-      });
-    }
   };
 
   // Buy Shop item

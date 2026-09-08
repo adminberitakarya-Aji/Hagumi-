@@ -3,7 +3,8 @@ import { DayPhase, SeasonType } from '../types/game';
 import { uiSeasonSfx } from './sound/uiSeasonSfx';
 import type { UiSeasonSfx } from './sound/uiSeasonSfx';
 
-class HagumiAudioEngine {
+// Diekspor sebagai tipe agar modul mixin (src/utils/sound/) bisa mengetik `this`.
+export class HagumiAudioEngine {
   // publik: diakses mixin di src/utils/sound/ (lihat uiSeasonSfx.ts)
   public ctx: AudioContext | null = null;
   public isMuted: boolean = false;
@@ -1999,8 +2000,9 @@ class HagumiAudioEngine {
 // ============================================================
 // Mixin: SFX UI/Hanabi/Shoji/Sensu & musim (src/utils/sound/uiSeasonSfx.ts)
 // Digabung ke prototype sehingga API soundEngine tetap identik bagi pemanggil.
+// Interface ikut diekspor agar konsumen singleton melihat properti mixin.
 // ============================================================
-interface HagumiAudioEngine extends UiSeasonSfx {}
+export interface HagumiAudioEngine extends UiSeasonSfx {}
 
 Object.assign(HagumiAudioEngine.prototype, uiSeasonSfx);
 
