@@ -149,12 +149,12 @@ Dalam skala industri:
 - [x] Ganti `name`/`version` di `package.json` (SELESAI: `hagumi@0.1.0` + description); README ditulis ulang penuh (boilerplate AI Studio diganti panduan install/run/build/env + dokumentasi).
 - [x] Hapus satu lockfile (SELESAI: `bun.lock` dihapus, standard **npm** dengan `package-lock.json`; terverifikasi tidak ada referensi bun di repo).
 - [x] Perbaiki `useEffect` dependency di `KitsuneCanvas.tsx` (SELESAI: RAF loop kini mount-once dengan `petRef`/`actionStateRef`/`eggCrackCountRef` yang di-sync via effect terpisah; `tick` animasi tidak pernah reset lagi).
-- [ ] Tambah `lang="id"` di `index.html` + favicon + meta `og:image`.
-- [ ] Toast duration 5 detik / dismissible.
+- [x] Tambah `lang="id"` di `index.html` + favicon + meta `og:image` (SELESAI: `lang="id"`, `public/favicon.svg` torii vermilion + `theme-color`, `og:image`/`twitter:image` menunjuk aset torii yang ter-track di repo, `og:locale id_ID`).
+- [x] Toast duration 5 detik / dismissible (SELESAI: 3000→5000 ms, klik untuk menutup, `aria-live`/`role="status"`, + fix timer lama yang bisa menutup toast baru prematur).
 - [x] Tulis ulang `docs/02` dari kode aktual (SELESAI: ditulis ulang penuh — 7 bagian sesuai kode: stat vital tanpa Spirit, decay loop 10 detik, Care Score 5-stat, offline decay, EXP `floor(40 × L^1.35 + 60)` dengan tabel terverifikasi, evolusi bercabang Tenko/Zenko/Yako/Nogitsune, Kizuna 5 milestone).
 
 ### Mid-Term
-- [ ] Unit test untuk `gameConfig.ts` (EXP curve, evolusi), `petSaveSchema.ts` (migrasi), dan decay loop (`useGameLoop.ts`).
+- [x] Unit test (SELESAI: Vitest 5 ditambahkan, script `npm run test`/`test:watch`; **79 test lulus** di 3 file — `gameConfig.test.ts` (kurva EXP, multi-level-up, evolusi bercabang, Kizuna, sanity katalog), `petSaveSchema.test.ts` (roundtrip, migrasi v1→v2, tolak save korup/versi baru, sanitasi clamp), `decayLoop.test.ts` (tick decay terjaga/tidur, poop, sakit, Care Score, offline decay cap/floor). Logika decay diekstrak ke `src/utils/decayLoop.ts` (pure) agar testable — `useGameLoop.ts` 208→88 baris, perilaku tidak berubah).
 - [ ] Aksesibilitas: aria-label, role dialog + focus trap, keyboard nav, `prefers-reduced-motion`.
 - [ ] React Error Boundary + modal konfirmasi reset pet.
 - [ ] Pecah `TatamiRoom.tsx` & `soundEngine.ts` menjadi modul lebih kecil.

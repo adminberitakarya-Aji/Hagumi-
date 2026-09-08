@@ -51,6 +51,18 @@ npm run build   # vite build + bundle server ke dist/
 npm run start   # menyajikan dist/ + API AI lewat Express (Cloud Run ready)
 ```
 
+## 🧪 Test
+
+```bash
+npm run test        # jalankan seluruh unit test sekali (Vitest)
+npm run test:watch  # mode watch saat pengembangan
+```
+
+Cakupan: formula gameplay (`gameConfig.ts`), schema & migrasi save
+(`petSaveSchema.ts`), dan decay loop (`decayLoop.ts`). Saat mengubah
+mekanika gameplay, jalankan test ini dan perbarui
+[`docs/02_GAMEPLAY_MECHANICS.md`](docs/02_GAMEPLAY_MECHANICS.md) di commit yang sama.
+
 ## 🔐 Variabel Lingkungan (lihat `.env.example`)
 
 | Variabel | Wajib? | Keterangan |
