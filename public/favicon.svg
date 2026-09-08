@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- HAGUMI favicon: gerbang Torii vermilion di atas latar malam tatami -->
+  <rect width="64" height="64" rx="14" fill="#1c1815"/>
+  <g fill="#d63a2f">
+    <!-- kasagi (palang atas melengkung) -->
+    <rect x="9" y="12" width="46" height="6" rx="3"/>
+    <!-- nuki (palang kedua) -->
+    <rect x="15" y="23" width="34" height="5" rx="2.5"/>
+    <!-- gakuzuka (penyambung tengah) -->
+    <rect x="29.5" y="18" width="5" height="5"/>
+    <!-- pilar kiri & kanan -->
+    <rect x="18" y="18" width="6" height="32" rx="2"/>
+    <rect x="40" y="18" width="6" height="32" rx="2"/>
+  </g>
+  <!-- titik cahaya roh kitsunebi -->
+  <circle cx="32" cy="38" r="4" fill="#fbbf24" opacity="0.9"/>
+</svg>

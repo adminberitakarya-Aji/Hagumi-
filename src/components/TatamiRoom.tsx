@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Utensils,
   Sparkles,
@@ -271,10 +271,25 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   };
 
 
-  // Show quick toast notification
+  // Show quick toast notification (5 detik; bisa ditutup lebih awal dengan klik)
+  const toastTimerRef = useRef<number | null>(null);
   const showToast = (msg: string) => {
+    // Bersihkan timer toast sebelumnya agar toast baru tidak tertutup prematur
+    if (toastTimerRef.current !== null) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    toastTimerRef.current = window.setTimeout(() => {
+      toastTimerRef.current = null;
+      setToastMessage(null);
+    }, 5000);
+  };
+  const dismissToast = () => {
+    if (toastTimerRef.current !== null) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToastMessage(null);
   };
 
   // Pet action: Petting the Kitsune (+5 EXP)
@@ -1479,10 +1494,16 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         </div>
       </section>
 
-      {/* TOAST ALERT NOTIFICATION */}
+      {/* TOAST ALERT NOTIFICATION (5 detik, klik untuk menutup) */}
       {toastMessage && (
         <div className="relative z-20 max-w-sm mx-auto my-0.5 flex-shrink-0 animate-in fade-in slide-in-from-top-1 px-2">
-          <div className="px-3 py-1 rounded-xl bg-amber-950/95 border border-amber-500/80 text-amber-200 text-[10px] sm:text-xs font-bold shadow-lg text-center">
+          <div
+            onClick={dismissToast}
+            role="status"
+            aria-live="polite"
+            title="Ketuk untuk menutup"
+            className="px-3 py-1 rounded-xl bg-amber-950/95 border border-amber-500/80 text-amber-200 text-[10px] sm:text-xs font-bold shadow-lg text-center cursor-pointer hover:bg-amber-900/95 transition-colors"
+          >
             {toastMessage}
           </div>
         </div>
