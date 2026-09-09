@@ -21,6 +21,14 @@ export default function App() {
   } = useGameLoop();
 
   const [activeEvolution, setActiveEvolution] = useState<EvolutionTarget | null>(null);
+
+  // Buffer hadiah Prolog yang diklaim SEBELUM pet ada (pemain baru belum menetas).
+  // Tanpa buffer ini, setPet((prev) => prev) adalah no-op saat pet masih null,
+  // sehingga bonus koin Omamori & careScore Ema lenyap diam-diam bagi pemain baru.
+  const [pendingPrologueRewards, setPendingPrologueRewards] = useState<{
+    coins: number;
+    careScore: number;
+  }>({ coins: 0, careScore: 0 });
   
   // Interactive Torii Prologue Gateway state
   const [isPrologueOpen, setIsPrologueOpen] = useState<boolean>(() => {
@@ -45,26 +53,40 @@ export default function App() {
   }, [pet?.stage, pet?.level, pet?.ageDays, pet?.careScore, pet?.stats.discipline, activeEvolution]);
 
   // Handle claiming Omamori blessing reward from Prologue
+  // Reward masuk buffer dulu; flushing ke pet dilakukan oleh useEffect di bawah
+  // (langsung jika pet sudah ada, atau setelah penetasan telur untuk pemain baru).
   const handleClaimBlessingReward = (bonusCoins: number) => {
-    setPet((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        coins: prev.coins + bonusCoins,
-      };
-    });
+    setPendingPrologueRewards((prev) => ({
+      ...prev,
+      coins: prev.coins + bonusCoins,
+    }));
   };
 
   // Handle saving Ema prayer
-  const handleSaveEmaPrayer = (prayer: string) => {
+  const handleSaveEmaPrayer = (_prayer: string) => {
+    setPendingPrologueRewards((prev) => ({
+      ...prev,
+      careScore: Math.min(100, prev.careScore + 5),
+    }));
+  };
+
+  // Flush buffer hadiah Prolog ke pet segera setelah pet tersedia.
+  // Dijalankan ulang secara reaktif: saat pemain baru menetas telur (pet berubah
+  // dari null menjadi PetData), seluruh reward yang diklaim di Prolog diterapkan.
+  useEffect(() => {
+    if (!pet) return;
+    if (pendingPrologueRewards.coins === 0 && pendingPrologueRewards.careScore === 0) return;
+
     setPet((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        careScore: Math.min(100, prev.careScore + 5),
+        coins: prev.coins + pendingPrologueRewards.coins,
+        careScore: Math.min(100, prev.careScore + pendingPrologueRewards.careScore),
       };
     });
-  };
+    setPendingPrologueRewards({ coins: 0, careScore: 0 });
+  }, [pet, pendingPrologueRewards]);
 
   // Still loading saved data from localStorage
   if (!isLoaded) {
