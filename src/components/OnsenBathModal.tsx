@@ -15,8 +15,8 @@ import { KitsuneCanvas } from './KitsuneCanvas';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
-import onsenBathDay from '../assets/images/onsen_empty_day_1788753903822.jpg';
-import onsenBathNight from '../assets/images/onsen_empty_night_1788753919598.jpg';
+import onsenBathDay from '../assets/images/onsen_empty_day_1788753903822.webp';
+import onsenBathNight from '../assets/images/onsen_empty_night_1788753919598.webp';
 
 interface OnsenBathModalProps {
   isOpen: boolean;

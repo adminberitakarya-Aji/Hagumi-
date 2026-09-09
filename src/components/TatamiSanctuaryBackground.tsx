@@ -3,8 +3,8 @@ import { DayPhase, SanctuaryDecorations, SeasonType } from '../types/game';
 import { soundEngine } from '../utils/soundEngine';
 
 // Authentic Illustrated Anime Sanctuary Background Assets
-import tatamiNightBg from '../assets/images/tatami_sanctuary_night_bg_1788712133951.jpg';
-import tatamiSunsetBg from '../assets/images/tatami_sanctuary_sunset_bg_1788712117321.jpg';
+import tatamiNightBg from '../assets/images/tatami_sanctuary_night_bg_1788712133951.webp';
+import tatamiSunsetBg from '../assets/images/tatami_sanctuary_sunset_bg_1788712117321.webp';
 
 interface TatamiSanctuaryBackgroundProps {
   timePhase: DayPhase;

@@ -21,11 +21,11 @@ import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
 // Image assets
-import fujiToriiGateway from '../assets/images/fuji_torii_gateway_1788711184860.jpg';
-import kitsuneNineTails from '../assets/images/kitsune_nine_tails_1788711198603.jpg';
-import kitsunePup from '../assets/images/kitsune_spirit_pup_1788711085047.jpg';
-import autumnShrineNight from '../assets/images/autumn_shrine_night_1788711140696.jpg';
-import shrineEmaAnimeArt from '../assets/images/shrine_ema_anime_art_1788711484322.jpg';
+import fujiToriiGateway from '../assets/images/fuji_torii_gateway_1788711184860.webp';
+import kitsuneNineTails from '../assets/images/kitsune_nine_tails_1788711198603.webp';
+import kitsunePup from '../assets/images/kitsune_spirit_pup_1788711085047.webp';
+import autumnShrineNight from '../assets/images/autumn_shrine_night_1788711140696.webp';
+import shrineEmaAnimeArt from '../assets/images/shrine_ema_anime_art_1788711484322.webp';
 
 export interface ToriiPrologueGatewayProps {
   isOpen: boolean;

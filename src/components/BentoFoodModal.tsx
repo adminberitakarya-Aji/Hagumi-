@@ -17,8 +17,8 @@ import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
 // Modern Bento Dining Veranda Artworks (Day & Night)
-import bentoDiningDay from '../assets/images/bento_dining_day_1788725227743.jpg';
-import bentoDiningNight from '../assets/images/bento_dining_night_1788725605115.jpg';
+import bentoDiningDay from '../assets/images/bento_dining_day_1788725227743.webp';
+import bentoDiningNight from '../assets/images/bento_dining_night_1788725605115.webp';
 
 interface BentoFoodModalProps {
   isOpen: boolean;

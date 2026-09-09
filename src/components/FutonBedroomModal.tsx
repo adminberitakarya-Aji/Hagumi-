@@ -5,8 +5,8 @@ import { KitsuneCanvas } from './KitsuneCanvas';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
-import bedroomFutonDay from '../assets/images/bedroom_futon_day_1788772630602.jpg';
-import bedroomFutonNight from '../assets/images/bedroom_futon_night_1788772606785.jpg';
+import bedroomFutonDay from '../assets/images/bedroom_futon_day_1788772630602.webp';
+import bedroomFutonNight from '../assets/images/bedroom_futon_night_1788772606785.webp';
 
 interface FutonBedroomModalProps {
   isOpen: boolean;

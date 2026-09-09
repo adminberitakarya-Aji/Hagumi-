@@ -6,8 +6,8 @@ import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
 // Modern Konbini Background Artworks (Day & Night)
-import konbiniShopDay from '../assets/images/konbini_shop_day_1788724576199.jpg';
-import konbiniShopNight from '../assets/images/konbini_shop_night_1788724594548.jpg';
+import konbiniShopDay from '../assets/images/konbini_shop_day_1788724576199.webp';
+import konbiniShopNight from '../assets/images/konbini_shop_night_1788724594548.webp';
 
 interface TanukiShopModalProps {
   isOpen: boolean;
