@@ -1,0 +1,47 @@
+# ==============================================================================
+# HAGUMI — Continuous Integration
+# Quality gate otomatis untuk setiap push & pull request ke master:
+#   1. npm ci                — install bersih dari package-lock.json (deterministik)
+#   2. npm run lint          — typecheck strict (tsc --noEmit)
+#   3. npm run test          — unit test formula gameplay (Vitest)
+#   4. npm run build         — produksi (Vite client + esbuild server)
+# Revisi 4 bug #6: sebelumnya test hanya lulus jika seseorang ingat menjalankannya.
+# ==============================================================================
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Batalkan run lama yang tersuper jika ada push baru pada branch yang sama (hemat runner)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 (sesuai environment pengembangan)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies (clean, dari lockfile)
+        run: npm ci
+
+      - name: Typecheck (tsc --noEmit, strict)
+        run: npm run lint
+
+      - name: Unit tests (Vitest)
+        run: npm run test
+
+      - name: Production build (Vite client + esbuild server)
+        run: npm run build

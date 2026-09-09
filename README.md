@@ -1,5 +1,7 @@
 # 🦊 HAGUMI (育み): Virtual Pet Kitsune
 
+[![CI](https://github.com/adminberitakarya-Aji/Hagumi-/actions/workflows/ci.yml/badge.svg)](https://github.com/adminberitakarya-Aji/Hagumi-/actions/workflows/ci.yml)
+
 Game *virtual pet* bertema mitologi rubah Jepang (Kitsune): merawat, memberi makan, dan mengevolusikan
 roh rubah dari telur permata Hōju hingga wujud Dewasa bercabang (Tenko / Zenko / Yako / Nogitsune)
 di santuari tatami tradisional Jepang — lengkap dengan mini-game festival Matsuri, petualangan Odekake,
