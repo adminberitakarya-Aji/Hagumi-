@@ -23,7 +23,6 @@ import { useOdekakeFlow } from '../hooks/useOdekakeFlow';
 import { useCareActions } from '../hooks/useCareActions';
 import { ELEMENTS_CONFIG, getRequiredExp, addPetExp, getBondingLevelInfo } from '../data/gameConfig';
 import { KitsuneCanvas } from './KitsuneCanvas';
-import { SanctuaryMenuModal } from './SanctuaryMenuModal';
 import { SeasonParticles } from './SeasonParticles';
 import { SeasonSwitcherPanel } from './SeasonSwitcherPanel';
 import { TatamiSanctuaryBackground } from './TatamiSanctuaryBackground';

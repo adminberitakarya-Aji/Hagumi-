@@ -1,13 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useGameLoop } from './hooks/useGameLoop';
-import { EggAltarModal } from './components/EggAltarModal';
 import { TatamiRoom } from './components/TatamiRoom';
-import { EvolutionModal } from './components/EvolutionModal';
-import { OfflineReturnModal } from './components/OfflineReturnModal';
-import { ToriiPrologueGateway } from './components/ToriiPrologueGateway';
 import { EvolutionTarget, determineNextEvolution } from './data/gameConfig';
 import { PetData } from './types/game';
 import { DialogA11yWrapper } from './hooks/useDialogA11y';
+
+// CODE SPLITTING (Revisi 4 bug #4): layar berat yang kondisional di-lazy-load
+// agar tidak ikut dalam bundle utama (pemain lama tidak pernah memuat Prolog/
+// Altar Telur; EvolutionModal & OfflineReturnModal hanya saat momennya tiba).
+const EggAltarModal = lazy(() =>
+  import('./components/EggAltarModal').then((m) => ({ default: m.EggAltarModal }))
+);
+const EvolutionModal = lazy(() =>
+  import('./components/EvolutionModal').then((m) => ({ default: m.EvolutionModal }))
+);
+const OfflineReturnModal = lazy(() =>
+  import('./components/OfflineReturnModal').then((m) => ({ default: m.OfflineReturnModal }))
+);
+const ToriiPrologueGateway = lazy(() =>
+  import('./components/ToriiPrologueGateway').then((m) => ({ default: m.ToriiPrologueGateway }))
+);
+
+/** Layar boot santuari — dipakai saat load save & sebagai fallback Suspense. */
+function SanctuaryBootFallback() {
+  return (
+    <div className="min-h-screen bg-[#1c1815] flex flex-col items-center justify-center text-amber-200 font-['Shippori_Mincho',serif]">
+      <div className="w-16 h-16 rounded-3xl bg-amber-950/80 border-2 border-amber-600/70 flex items-center justify-center text-3xl animate-spin mb-3">
+        ⛩️
+      </div>
+      <p className="text-sm tracking-widest uppercase font-bold text-amber-300">
+        Membuka Gerbang Kuil HAGUMI...
+      </p>
+    </div>
+  );
+}
 
 export default function App() {
   const {
@@ -90,16 +116,7 @@ export default function App() {
 
   // Still loading saved data from localStorage
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-[#1c1815] flex flex-col items-center justify-center text-amber-200 font-['Shippori_Mincho',serif]">
-        <div className="w-16 h-16 rounded-3xl bg-amber-950/80 border-2 border-amber-600/70 flex items-center justify-center text-3xl animate-spin mb-3">
-          ⛩️
-        </div>
-        <p className="text-sm tracking-widest uppercase font-bold text-amber-300">
-          Membuka Gerbang Kuil HAGUMI...
-        </p>
-      </div>
-    );
+    return <SanctuaryBootFallback />;
   }
 
   // If initial visitor and has not passed prologue yet, show Prologue Gateway before hatching
@@ -107,12 +124,14 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#0e0906] text-stone-100 flex flex-col justify-center">
         <DialogA11yWrapper isActive={true} label="Gerbang Prolog Torii">
-          <ToriiPrologueGateway
-            isOpen={true}
-            onEnterSanctuary={() => setIsPrologueOpen(false)}
-            onClaimBlessingReward={handleClaimBlessingReward}
-            onSaveEmaPrayer={handleSaveEmaPrayer}
-          />
+          <Suspense fallback={<SanctuaryBootFallback />}>
+            <ToriiPrologueGateway
+              isOpen={true}
+              onEnterSanctuary={() => setIsPrologueOpen(false)}
+              onClaimBlessingReward={handleClaimBlessingReward}
+              onSaveEmaPrayer={handleSaveEmaPrayer}
+            />
+          </Suspense>
         </DialogA11yWrapper>
       </div>
     );
@@ -123,11 +142,13 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#181411] text-stone-100 flex flex-col justify-center">
         <DialogA11yWrapper isActive={true} label="Altar Penetasan Telur Inari">
-          <EggAltarModal
-            onHatchComplete={(newPet: PetData) => {
-              setPet(newPet);
-            }}
-          />
+          <Suspense fallback={<SanctuaryBootFallback />}>
+            <EggAltarModal
+              onHatchComplete={(newPet: PetData) => {
+                setPet(newPet);
+              }}
+            />
+          </Suspense>
         </DialogA11yWrapper>
       </div>
     );
@@ -170,25 +191,29 @@ export default function App() {
       {/* Torii Prologue Gateway Overlay */}
       {isPrologueOpen && (
         <DialogA11yWrapper isActive={isPrologueOpen} label="Gerbang Prolog Torii">
-          <ToriiPrologueGateway
-            isOpen={isPrologueOpen}
-            onEnterSanctuary={() => setIsPrologueOpen(false)}
-            onClose={() => setIsPrologueOpen(false)}
-            onClaimBlessingReward={handleClaimBlessingReward}
-            onSaveEmaPrayer={handleSaveEmaPrayer}
-          />
+          <Suspense fallback={null}>
+            <ToriiPrologueGateway
+              isOpen={isPrologueOpen}
+              onEnterSanctuary={() => setIsPrologueOpen(false)}
+              onClose={() => setIsPrologueOpen(false)}
+              onClaimBlessingReward={handleClaimBlessingReward}
+              onSaveEmaPrayer={handleSaveEmaPrayer}
+            />
+          </Suspense>
         </DialogA11yWrapper>
       )}
 
       {/* Evolution Ceremony Modal */}
       {activeEvolution && (
         <DialogA11yWrapper isActive={true} label="Upacara Evolusi Kitsune">
-          <EvolutionModal
-            isOpen={Boolean(activeEvolution)}
-            evolutionTarget={activeEvolution}
-            pet={pet}
-            onConfirmEvolution={handleConfirmEvolution}
-          />
+          <Suspense fallback={null}>
+            <EvolutionModal
+              isOpen={Boolean(activeEvolution)}
+              evolutionTarget={activeEvolution}
+              pet={pet}
+              onConfirmEvolution={handleConfirmEvolution}
+            />
+          </Suspense>
         </DialogA11yWrapper>
       )}
 
@@ -199,13 +224,15 @@ export default function App() {
           onClose={closeOfflineModal}
           label="Ringkasan Kepulangan Offline"
         >
-          <OfflineReturnModal
-            isOpen={true}
-            onClose={closeOfflineModal}
-            minutesAway={offlineAwayMinutes}
-            petName={pet.name}
-            bonusCoins={offlineCoins}
-          />
+          <Suspense fallback={null}>
+            <OfflineReturnModal
+              isOpen={true}
+              onClose={closeOfflineModal}
+              minutesAway={offlineAwayMinutes}
+              petName={pet.name}
+              bonusCoins={offlineCoins}
+            />
+          </Suspense>
         </DialogA11yWrapper>
       )}
     </div>

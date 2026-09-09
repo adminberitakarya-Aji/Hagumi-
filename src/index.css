@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Audit ukuran CSS Tailwind (Revisi 4 bug #4):
+  utility yang di-generate dibatasi HANYA dari source aplikasi.
+   File markdown (docs/, audit.md, ROADMAP.md, DOKUMENTASI_GAME.md)
+   dan script build tidak berisi markup — tanpa exclusion, Tailwind 4
+   tetap memindainya dan bisa men-generate utility "hantu" dari token
+   yang kebetulan mirip nama class (mis. `text-xs` yang dikutip di laporan).
+   ============================================================ */
+@source not "../docs";
+@source not "../audit.md";
+@source not "../ROADMAP.md";
+@source not "../DOKUMENTASI_GAME.md";
+@source not "../scripts";
+
 html, body, #root {
   height: 100%;
   max-height: 100dvh;
