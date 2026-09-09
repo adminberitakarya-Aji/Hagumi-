@@ -191,7 +191,7 @@ export const FOOD_ITEMS: Record<string, FoodItem> = {
     happiness: 35,
     curesSickness: true,
     health: 50,
-    discipline: 15,
+    discipline: 10,
     exp: 45,
     description: 'Kantung kain brokat merah pembawa berkah perlindungan Inari Okami.',
     iconEmoji: '🏮',
@@ -578,7 +578,7 @@ export function determineNextEvolution(
         minCareScore: 85,
         description: 'Bentuk paling suci dan agung berekor sembilan pembawa berkah surgawi.',
       };
-    } else if (careScore >= 70 && discipline >= 60) {
+    } else if (careScore >= 70 && discipline >= 70) {
       return {
         stage: 'dewasa',
         form: 'zenko',
@@ -588,7 +588,7 @@ export function determineNextEvolution(
         minLevel: 10,
         minAgeDays: 5,
         minCareScore: 70,
-        minDiscipline: 60,
+        minDiscipline: 70,
         description: 'Rubah putih penolong yang setia menjaga kedamaian dan kesejahteraan.',
       };
     } else if (careScore >= 50) {

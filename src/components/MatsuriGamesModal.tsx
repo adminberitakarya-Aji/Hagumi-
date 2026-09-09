@@ -6,7 +6,8 @@ import { hapticEngine } from '../utils/hapticFeedback';
 interface MatsuriGamesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onReward: (coinsEarned: number, happinessGained: number) => void;
+  /** disciplineGained (opsional): bonus disiplin khusus Wanage performa bagus (Revisi 4 bug #5). */
+  onReward: (coinsEarned: number, happinessGained: number, disciplineGained?: number) => void;
 }
 
 type MiniGameTab = 'kingyo' | 'wanage' | 'dash' | 'taiko';
@@ -750,7 +751,7 @@ const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) => void
 };
 
 // --- MINI GAME 2: Wanage (Ring Toss) ---
-const WanageGame: React.FC<{ onReward: (coins: number, hap: number) => void }> = ({ onReward }) => {
+const WanageGame: React.FC<{ onReward: (coins: number, hap: number, disciplineGained?: number) => void }> = ({ onReward }) => {
   const [ringsLeft, setRingsLeft] = useState(5);
   const [score, setScore] = useState(0);
   const [power, setPower] = useState(50);
@@ -792,7 +793,10 @@ const WanageGame: React.FC<{ onReward: (coins: number, hap: number) => void }> =
       setGameDone(true);
       setIsAiming(false);
       soundEngine.playEvolutionFanfare();
-      onReward(Math.floor(nextScore * 0.8) + 10, nextScore + 15);
+      // Bonus disiplin: ketangkasan Wanage melatih fokus Kitsune (Revisi 4 bug #5).
+      // +8 jika tancapan bagus (skor ≥ 25), +4 jika cukup (≥ 12).
+      const disciplineBonus = nextScore >= 25 ? 8 : nextScore >= 12 ? 4 : 0;
+      onReward(Math.floor(nextScore * 0.8) + 10, nextScore + 15, disciplineBonus);
     }
   };
 

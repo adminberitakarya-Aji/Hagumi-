@@ -23,7 +23,7 @@ import {
   getBondingLevelInfo,
 } from '../data/gameConfig';
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /** Kunci localStorage untuk backup save yang gagal divalidasi (jangan ditimpa otomatis). */
 export const CORRUPT_SAVE_BACKUP_KEY = 'HAGUMI_KITSUNE_SAVE_DATA_CORRUPT';
@@ -99,6 +99,11 @@ export function validateAndSanitizePetData(parsed: any): PetData {
     bondingPoints: typeof parsed.bondingPoints === 'number' ? parsed.bondingPoints : 120,
     bondingLevel: typeof parsed.bondingLevel === 'number' ? parsed.bondingLevel : 1,
     bondingTitle: parsed.bondingTitle || 'Kenalan Kuil',
+    // Cooldown meditasi Zen harian (YYYY-MM-DD lokal, schema v3) — Revisi 4 bug #5
+    lastZenMeditationDate:
+      typeof parsed.lastZenMeditationDate === 'string' && parsed.lastZenMeditationDate
+        ? parsed.lastZenMeditationDate.slice(0, 10)
+        : undefined,
   };
 
   const bondInfo = getBondingLevelInfo(sanitized.bondingPoints ?? 120);
@@ -119,9 +124,16 @@ function migrateV1ToV2(data: any): any {
   return data;
 }
 
+function migrateV2ToV3(data: any): any {
+  // v3 menambahkan `lastZenMeditationDate` (cooldown meditasi Zen harian,
+  // Revisi 4 bug #5) — save lama cukup dibiarkan tanpa field (undefined).
+  return data;
+}
+
 /** Chain migration: kunci = versi sumber, nilai = fungsi ke versi berikutnya. */
 const MIGRATIONS: Record<number, (data: any) => any> = {
   1: migrateV1ToV2,
+  2: migrateV2ToV3,
 };
 
 /**

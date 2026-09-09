@@ -113,6 +113,8 @@ export interface PetData {
   bondingPoints?: number;
   bondingLevel?: number;
   bondingTitle?: string;
+  /** Cooldown meditasi Zen harian: tanggal lokal terakhir (YYYY-MM-DD) — 1× per hari kalender. */
+  lastZenMeditationDate?: string;
   activeOdekake?: OdekakeTrip;
   completedOdekakes?: number;
   unlockedPostcards?: string[];

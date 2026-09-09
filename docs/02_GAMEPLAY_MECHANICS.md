@@ -20,10 +20,10 @@ Setiap Kitsune memiliki 6 stat dengan rentang nilai **0 hingga 100** (interface 
 | :--- | :--- | :--- |
 | **Kenyang (Hunger)** | Daya tahan fisik harian; meluruh terus-menerus. | Memberi makan di Bento Dining (aburaage, dango, manju, sup miso, dll.). |
 | **Energi (Energy)** | Kapasitas beraktivitas dan bermain. | Tidur 15 menit di kamar futon; pulih +1,1/10 detik saat tidur. |
-| **Kebersihan (Cleanliness)** | Kesucian bulu roh dari debu dan kotoran. | Mandi Onsen dan sapu-beres tatami (`handleCleanAndBath`). |
-| **Kebahagiaan (Happiness)** | Suasana hati dan keceriaan batin. | Mengelus kitsune, mini-game Matsuri, Hanabi, perjalanan Odekake. |
-| **Disiplin (Discipline)** | Karakter roh; **tidak meluruh** di decay loop. | (Stat pasif — saat ini hanya dipakai sebagai syarat evolusi Zenko, lihat §6.) |
-| **Kesehatan (Health)** | Vitalitas umum; dipengaruhi 5 stat lainnya. | Penyembuhan alami (+0,3/10 detik) saat kenyang > 60 dan bersih > 60. |
+| **Kebersihan (Cleanliness)** | Kesucian bulu roh dari debu dan kotoran. | Mandi Onsen dan sapu-beres tatami (`handleCleanAndBath`); khasiat cleanliness beberapa makanan (`handleFeedItem`). |
+| **Kebahagiaan (Happiness)** | Suasana hati dan keceriaan batin. | Mengelus kitsune, mini-game Matsuri, Hanabi, perjalanan Odekake, meditasi Zen. |
+| **Disiplin (Discipline)** | Fokus & manasik roh; menentukan cabang evolusi Zenko. Meluruh **sangat lembut** saat pengasuhan terlala (lihat §2). | Meditasi Zen Taman Engawa (**+15, 1× per hari kalender** — cooldown `lastZenMeditationDate`), Wanage skor bagus (+8 / +4), Jimat Omamori (+10 via `handleFeedItem`). |
+| **Kesehatan (Health)** | Vitalitas umum; dipengaruhi 6 stat lainnya. | Penyembuhan alami (+0,3/10 detik) saat kenyang > 60 dan bersih > 60. |
 
 > ⚠️ **Tidak ada stat "Spirit/Spiritualitas (霊力)"** di `PetStats`. Spesifikasi lama yang menyebutkannya sudah
 > tidak berlaku. HUD in-game menampilkan 6 stat ini, ditambah koin dan usia.
@@ -41,6 +41,7 @@ Decay loop berjalan setiap **10 detik** (interval `setInterval` di `useGameLoop.
 | Energi (Energy) | **+1,1** | Saat tidur (mencapai 100 dalam ±15 menit). |
 | Kebersihan (Cleanliness) | **−0,12** | Selalu. |
 | Kebahagiaan (Happiness) | **−0,5** | Jika hunger < 25 **atau** energy < 20 **atau** cleanliness < 25. |
+| Disiplin (Discipline) | **−0,01** | Bersamaan penalti happiness di atas; **hanya saat terjaga** — floor 10 (≈ −3,6/jam terburuk). |
 | Care Mistakes | **+0,05** | Bersamaan dengan penurunan happiness di atas. |
 | Kotoran (Poop) | Peluang **8%** | Jika terjaga, hunger > 30, dan poopCount < 4. |
 | Sakit (Sickness) | Peluang **10%** | Jika cleanliness < 20 **atau** poopCount ≥ 3. |
@@ -58,12 +59,15 @@ saat sakit, dan tidak ada mekanika kematian. Kitsune yang terlala hanya tampak l
 Care Score dihitung ulang setiap tick decay di `useGameLoop.ts`:
 
 ```
-careScore = clamp( round( (hunger + energy + cleanliness + happiness + health) / 5
+careScore = clamp( round( (hunger + energy + cleanliness + happiness
+                          + health + discipline) / 6
                           − careMistakes × 0.5 ), 10, 100 )
 ```
 
 Catatan penting yang membedakan dari spesifikasi lama:
-- Hanya **5 stat** yang dirata-rata — **discipline tidak masuk** dalam Care Score.
+- **6 stat** dirata-rata — **discipline kini masuk** dalam Care Score (Revisi 4 bug #5). Nilai awal
+  disiplin saat penetasan adalah 50, sehingga Care Score tipikal sedikit lebih rendah dibanding
+  formula 5-stat lama; kenaikan disiplin otomatis mengangkat Care Score.
 - `careMistakes` mengakumulasi +0,05 per tick selama pengasuhan terabaikan (lihat §2) dan hanya
   di-reset oleh aksi perawatan — sehingga kesalahan lama tetap berdampak sampai diperbaiki.
 - Rentang akhir dibatasi **10–100**.
@@ -71,8 +75,8 @@ Catatan penting yang membedakan dari spesifikasi lama:
 Contoh terverifikasi (hitung ulang dari formula):
 | Kondisi | Care Score |
 | :--- | :---: |
-| Kelima stat 90, careMistakes 0 | **90** |
-| Kelima stat 60, careMistakes 20 | **50** |
+| Keenam stat 90, careMistakes 0 | **90** |
+| Keenam stat 60, careMistakes 20 | **50** |
 
 **Peran Care Score**: syarat percabangan evolusi Dewasa/Mistik (§6) dan indikator kualitas pengasuhan
 secara keseluruhan. Ekspresi mood visual (balon pikiran, efek status) ditangani sistem
@@ -157,7 +161,7 @@ bukan linier seperti spesifikasi lama:
 | Bayi → Anak | Kogitsune (Anak Rubah) | 子狐 | 2 | Level ≥ 3 **dan** usia ≥ 1 hari. |
 | Anak → Remaja | Wakahitsune (Rubah Muda) | 若狐 | 3 | Level ≥ 6 **dan** usia ≥ 3 hari. |
 | Remaja → Dewasa | **Tenko** (Rubah Surgawi) | 天狐 | 9 | Level ≥ 10, usia ≥ 5 hari, **careScore ≥ 85**. |
-| Remaja → Dewasa | **Zenko** (Rubah Kebajikan) | 善狐 | 7 | Level ≥ 10, usia ≥ 5 hari, careScore ≥ 70 **dan** discipline ≥ 60. |
+| Remaja → Dewasa | **Zenko** (Rubah Kebajikan) | 善狐 | 7 | Level ≥ 10, usia ≥ 5 hari, careScore ≥ 70 **dan** discipline ≥ 70. |
 | Remaja → Dewasa | **Yako** (Rubah Liar Cerdik) | 野狐 | 5 | Level ≥ 10, usia ≥ 5 hari, careScore ≥ 50. |
 | Remaja → Dewasa | **Nogitsune** (Rubah Rimba) | 野狐 | 4 | Level ≥ 10, usia ≥ 5 hari, careScore < 50 (fallback). |
 
@@ -190,6 +194,34 @@ Sumber poin bonding yang terverifikasi di kode:
 - **Mengelus kitsune**: +2 poin per tap (bersamaan dengan +5 EXP dan +3 happiness).
 - **Odekake**: `reward.bondingPoints` sesuai config perjalanan.
 - Progress bar, milestone berikutnya, dan persentase dihitung `getBondingLevelInfo`.
+
+---
+
+## 🎯 8. Sistem Disiplin (*Discipline*) — Revisi 4 bug #5
+
+Disiplin menentukan cabang evolusi **Zenko** (§6: careScore ≥ 70 **dan** discipline ≥ 70) dan kini
+hidup dalam gameplay — punya sumber naik multi-aksi dan penurun lembut. Nilai awal saat penetasan: **50**.
+
+### Sumber kenaikan
+
+| Aksi | Disiplin | Cooldown / Syarat |
+| :--- | :---: | :--- |
+| Meditasi Zen Taman Engawa (`handleZenMeditation`) | **+15** | **1× per hari kalender** — disimpan `lastZenMeditationDate` (YYYY-MM-DD lokal, schema save v3). Sebelum cooldown ini, aksi bisa di-spam ke 100. |
+| Wanage skor ≥ 25 (tancapan bagus) | **+8** | Tiap sesi main; skor < 25 tapi ≥ 12 tetap dapat **+4**. Dikirim via parameter ketiga `onReward` Matsuri. |
+| Jimat Omamori (`FOOD_ITEMS.omamori`) | **+10** | Tiap pemberian — kandungan `discipline` item kini diterapkan `handleFeedItem` (sebelumnya ada di katalog tapi tidak berfungsi). |
+
+### Penurunan & perlindungan
+
+- **Penurun lembut**: −0,01/tick (±3,6/jam terburuk) — hanya saat terjaga, dan hanya ketika
+  pengasuhan terlala (hunger < 25 / energy < 20 / cleanliness < 25), bersamaan penalti happiness.
+- **Floor 10**: disiplin tidak pernah turun di bawah 10 — pemain tidak bisa terkunci permanen dari
+  Zenko; recovery via meditasi Zen selalu tersedia.
+- **Tidak turun saat tidur** maupun saat offline decay (offline decay tidak menyentuh discipline).
+
+### Peran lain
+
+Disiplin juga masuk rata-rata **6-stat** Care Score (§3) — pemain yang konsisten bermeditasi
+otomatis mengangkat kualitas pengasuhan keseluruhan, bukan hanya jalur evolusi Zenko.
 
 ---
 

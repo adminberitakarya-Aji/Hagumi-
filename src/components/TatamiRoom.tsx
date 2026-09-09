@@ -366,13 +366,16 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   };
 
   // Mini games reward (Dynamic EXP based on performance)
-  const handleGameReward = (coinsEarned: number, hapGained: number) => {
+  // disciplineGained (opsional): bonus disiplin dari Wanage performa bagus (Revisi 4 bug #5).
+  const handleGameReward = (coinsEarned: number, hapGained: number, disciplineGained?: number) => {
     const expGain = Math.max(15, Math.floor(coinsEarned * 0.8) + 15);
     const expRes = addPetExp(pet.exp, pet.level, expGain);
 
     if (expRes.leveledUp) {
       soundEngine.playEvolutionFanfare();
       showToast(`🎉 Level Up! Prestasi festival membawa ${pet.name} naik ke Level ${expRes.newLevel}!`);
+    } else if (disciplineGained && disciplineGained > 0) {
+      showToast(`Hadiah Festival: +${coinsEarned} Ryo, +${hapGained} Bahagia, +${disciplineGained} Disiplin & +${expGain} EXP!`);
     } else {
       showToast(`Hadiah Festival: +${coinsEarned} Ryo, +${hapGained} Bahagia & +${expGain} EXP!`);
     }
@@ -385,6 +388,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         stats: {
           ...prev.stats,
           happiness: Math.min(100, prev.stats.happiness + hapGained),
+          discipline: Math.min(100, prev.stats.discipline + (disciplineGained || 0)),
         },
         totalMiniGamesWon: prev.totalMiniGamesWon + 1,
         exp: res.newExp,

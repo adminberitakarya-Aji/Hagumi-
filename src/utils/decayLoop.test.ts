@@ -38,14 +38,14 @@ describe('applyDecayTick — kondisi normal (terjaga)', () => {
     expect(JSON.stringify(pet)).toBe(before);
   });
 
-  it('Care Score dihitung ulang dari rata-rata 5 vital (contoh 80→84)', () => {
+  it('Care Score dihitung ulang dari rata-rata 6 vital (contoh 80→78)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(NO_EVENT);
     const next = applyDecayTick(makePet(), TEST_NOW);
-    // (79.88 + 79.85 + 79.88 + 80 + 100) / 5 = 83.922 → 84
-    expect(next.careScore).toBe(84);
+    // (79.88 + 79.85 + 79.88 + 80 + 100 + 50) / 6 = 78.268 → 78
+    expect(next.careScore).toBe(78);
   });
 
-  it('tidak mengubah discipline', () => {
+  it('tidak mengubah discipline saat pengasuhan sehat', () => {
     vi.spyOn(Math, 'random').mockReturnValue(NO_EVENT);
     const next = applyDecayTick(
       makePet({
@@ -54,6 +54,41 @@ describe('applyDecayTick — kondisi normal (terjaga)', () => {
       TEST_NOW
     );
     expect(next.stats.discipline).toBe(77);
+  });
+
+  it('discipline meluruh lembut (−0,01) saat pengasuhan terlala, dengan floor 10', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(NO_EVENT);
+    // hunger 20 < 25 → penalti happiness + penurun disiplin aktif
+    const next = applyDecayTick(
+      makePet({
+        stats: { hunger: 20, energy: 80, cleanliness: 80, happiness: 80, discipline: 50, health: 100 },
+      }),
+      TEST_NOW
+    );
+    expect(next.stats.discipline).toBeCloseTo(49.99, 5);
+    expect(next.stats.happiness).toBe(79.5); // −0,5 penalti normal
+
+    // Floor: disiplin 10 tidak pernah turun lebih
+    const floored = applyDecayTick(
+      makePet({
+        stats: { hunger: 20, energy: 80, cleanliness: 80, happiness: 80, discipline: 10, health: 100 },
+      }),
+      TEST_NOW
+    );
+    expect(floored.stats.discipline).toBe(10);
+  });
+
+  it('discipline tidak turun saat tidur meski pengasuhan terlala', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(NO_EVENT);
+    const next = applyDecayTick(
+      makePet({
+        isSleeping: true,
+        sleepUntilTimestamp: TEST_NOW + 60_000,
+        stats: { hunger: 20, energy: 80, cleanliness: 80, happiness: 80, discipline: 50, health: 100 },
+      }),
+      TEST_NOW
+    );
+    expect(next.stats.discipline).toBe(50);
   });
 });
 
@@ -108,8 +143,8 @@ describe('applyDecayTick — penalti, kotoran & sakit', () => {
     expect(next.stats.hunger).toBeCloseTo(19.88, 5);
     expect(next.stats.happiness).toBe(79.5);
     expect(next.careMistakes).toBeCloseTo(0.05, 5);
-    // (19.88 + 79.85 + 79.88 + 79.5 + 100) / 5 − 0.025 = 71.797 → 72
-    expect(next.careScore).toBe(72);
+    // (19.88 + 79.85 + 79.88 + 79.5 + 100 + 49.99) / 6 − 0.025 = 68.158 → 68
+    expect(next.careScore).toBe(68);
   });
 
   it('kotoran muncul: terjaga, hunger > 30, random < 0,08', () => {

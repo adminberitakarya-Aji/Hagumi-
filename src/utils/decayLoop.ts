@@ -46,6 +46,7 @@ export function applyDecayTick(prev: PetData, now: number): PetData {
   let cleanliness = Math.max(0, prev.stats.cleanliness - cleanlinessDecay);
   let happiness = prev.stats.happiness;
   let health = prev.stats.health;
+  let discipline = prev.stats.discipline;
   let isSick = prev.isSick;
   let poopCount = prev.poopCount;
   let careMistakes = prev.careMistakes;
@@ -54,6 +55,12 @@ export function applyDecayTick(prev: PetData, now: number): PetData {
   if (hunger < 25 || energy < 20 || cleanliness < 25) {
     happiness = Math.max(0, happiness - 0.5);
     careMistakes += 0.05;
+    // Penurunan disiplin LEMBUT saat pengasuhan terlala (bangun saja; saat tidur
+    // tidak turun). Laju −0,01/tick = ±3,6/jam dalam kondisi terburuk, dengan
+    // floor 10 — pemain bisa memulihkan via meditasi Zen / Omamori / Wanage.
+    if (!isSleeping) {
+      discipline = Math.max(10, discipline - 0.01);
+    }
   }
 
   // Random Poop generator: if hunger > 35 and elapsed, chance to poop
@@ -77,9 +84,10 @@ export function applyDecayTick(prev: PetData, now: number): PetData {
   }
 
   // Calculate Care Score (0 - 100)
-  // Formula: average of vitals with penalty for mistakes
+  // Formula: rata-rata 6 stat vital (termasuk discipline — Revisi 4 bug #5)
+  // dengan penalti untuk mistakes.
   const vitalsAvg =
-    (hunger + energy + cleanliness + happiness + health) / 5;
+    (hunger + energy + cleanliness + happiness + health + discipline) / 6;
   const careScore = Math.max(
     10,
     Math.min(100, Math.round(vitalsAvg - careMistakes * 0.5))
@@ -92,7 +100,7 @@ export function applyDecayTick(prev: PetData, now: number): PetData {
       energy,
       cleanliness,
       happiness,
-      discipline: prev.stats.discipline,
+      discipline,
       health,
     },
     isSick,

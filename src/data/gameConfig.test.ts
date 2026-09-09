@@ -132,19 +132,19 @@ describe('determineNextEvolution — evolusi bercabang', () => {
     });
   });
 
-  it('cabang Dewasa: careScore ≥ 70 & discipline ≥ 60 → Zenko (7 ekor)', () => {
-    expect(determineNextEvolution('remaja', 10, 5, 84, 60)).toMatchObject({
+  it('cabang Dewasa: careScore ≥ 70 & discipline ≥ 70 → Zenko (7 ekor)', () => {
+    expect(determineNextEvolution('remaja', 10, 5, 84, 70)).toMatchObject({
       form: 'zenko',
       tailCount: 7,
     });
-    expect(determineNextEvolution('remaja', 10, 5, 70, 60)).toMatchObject({
+    expect(determineNextEvolution('remaja', 10, 5, 70, 70)).toMatchObject({
       form: 'zenko',
       tailCount: 7,
     });
   });
 
   it('cabang Dewasa: careScore ≥ 50 (disiplin kurang) → Yako (5 ekor)', () => {
-    expect(determineNextEvolution('remaja', 10, 5, 84, 59)).toMatchObject({
+    expect(determineNextEvolution('remaja', 10, 5, 84, 69)).toMatchObject({
       form: 'yako',
       tailCount: 5,
     });

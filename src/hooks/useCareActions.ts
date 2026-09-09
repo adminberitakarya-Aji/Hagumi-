@@ -116,6 +116,16 @@ export function useCareActions({
         ? Math.min(100, prev.stats.health + (item.health || 40))
         : prev.stats.health;
       const curesSick = item.curesSickness ? false : prev.isSick;
+      // Khasiat kandungan item (Revisi 4 bug #5): Omamori punya discipline,
+      // beberapa makanan punya cleanliness — sebelumnya tidak diterapkan.
+      const newDiscipline = Math.min(
+        100,
+        prev.stats.discipline + (item.discipline || 0)
+      );
+      const newCleanliness = Math.min(
+        100,
+        prev.stats.cleanliness + (item.cleanliness || 0)
+      );
 
       const res = addPetExp(prev.exp, prev.level, expGain);
       const newBondingPts = (prev.bondingPoints ?? 120) + bondingGain;
@@ -130,6 +140,8 @@ export function useCareActions({
           happiness: newHappiness,
           energy: newEnergy,
           health: newHealth,
+          discipline: newDiscipline,
+          cleanliness: newCleanliness,
         },
         bondingPoints: newBondingPts,
         bondingLevel: bondInfo.level,

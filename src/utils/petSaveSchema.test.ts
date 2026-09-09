@@ -54,6 +54,23 @@ describe('migrasi & validasi format lama', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('schema v3: lastZenMeditationDate valid lolos roundtrip, invalid dibuang', () => {
+    // Valid: string tanggal YYYY-MM-DD dipertahankan (dipotong ke 10 karakter)
+    const pet = makePet({ lastZenMeditationDate: '2026-09-10T14:30:00.000Z' });
+    const result = parseAndMigratePetSave(serializePetSave(pet));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.pet.lastZenMeditationDate).toBe('2026-09-10');
+    }
+
+    // Invalid: bukan string → di-sanitasi jadi undefined (belum pernah meditasi)
+    const result2 = parseAndMigratePetSave(serializePetSave(makePet({ lastZenMeditationDate: undefined })));
+    expect(result2.ok).toBe(true);
+    if (result2.ok) {
+      expect(result2.pet.lastZenMeditationDate).toBeUndefined();
+    }
+  });
+
   it('save dari versi aplikasi lebih baru DITOLAK (tidak diubah diam-diam)', () => {
     const result = parseAndMigratePetSave({
       version: CURRENT_SCHEMA_VERSION + 1,

@@ -621,7 +621,18 @@ export const ZenGardenModal: React.FC<ZenGardenModalProps> = ({
   };
 
   // Meditate session (Shishi-odoshi sound + stat blessing)
+  // Cooldown 1× per hari kalender (Revisi 4 bug #5): stat disiplin terlalu
+  // penting untuk evolusi Zenko untuk bisa di-spam.
+  const todayKey = new Date().toLocaleDateString('sv-SE'); // format YYYY-MM-DD lokal
+  const alreadyMeditatedToday = pet.lastZenMeditationDate === todayKey;
+
   const handleZenMeditation = () => {
+    if (alreadyMeditatedToday) {
+      soundEngine.playSuzuChime();
+      showToast('🌴 Kitsune sudah bermeditasi hari ini... Batinnya masih tenang. Kembali lagi besok!');
+      return;
+    }
+
     soundEngine.playShishiOdoshi();
     hapticEngine.heavy();
     setSandMeditateCount((c) => c + 1);
@@ -633,6 +644,7 @@ export const ZenGardenModal: React.FC<ZenGardenModalProps> = ({
         happiness: Math.min(100, prev.stats.happiness + 12),
         discipline: Math.min(100, prev.stats.discipline + 15),
       },
+      lastZenMeditationDate: new Date().toLocaleDateString('sv-SE'),
       lastInteractionTime: Date.now(),
     }));
 
