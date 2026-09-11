@@ -281,7 +281,6 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     handleConfirmSleep,
     handleSleepButtonClick,
     handleCleanAndBath,
-    handleToggleSleep,
   } = useCareActions({
     pet,
     setPet,

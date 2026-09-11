@@ -52,6 +52,23 @@ Decay loop berjalan setiap **10 detik** (interval `setInterval` di `useGameLoop.
 **Desain "cozy" tanpa kematian**: stat memiliki batas bawah alami — health dan happiness berhenti di 10
 saat sakit, dan tidak ada mekanika kematian. Kitsune yang terlala hanya tampak lesu, bukan mati.
 
+### 🛏️ 2.1 Model Reward Bangun Tidur (*Sleep Wake Reward*) — sejak 10 September 2026
+
+Menutup eksploit siklus "tidur → Bangunkan Awal → tidur lagi" (sebelumnya +14 EXP & +25 energi per
+siklus ±5 detik). Keputusan reward kini murni fungsi waktu nyata di `src/utils/sleepReward.ts`
+(`resolveSleepWakeReward(now, sleepUntilTimestamp, currentEnergy)`), dihitung dari
+`sleepUntilTimestamp` — **bukan** dari bar energi visual `energyProgress` (bar itu bisa dinaikkan
+sentuhan lembut di kamar dan kini murni kosmetik):
+
+| Kondisi | Bonus penyelesaian | Keterangan |
+| :--- | :--- | :--- |
+| Sesi 15 menit **selesai** | **+14 EXP**, energi tambahan `min(100 − energi, 25)` | Termasuk selesai otomatis (decay loop saat online, modal kamar saat `diff === 0`, atau offline decay). |
+| **Bangun awal** (sesi masih aktif) | **0 EXP, 0 bonus energi** | Sesi dibatalkan; energi hasil akumulasi **pasif** decay loop (+1,1/10 dtk online / +15/jam offline) tetap aman dibawa pulang. Siklus spam = selalu 0/0. |
+
+Konsisten dengan pola Odekake: *selesaikan perjalanan = hadiah penuh; pulang awal = hadiah tidak ada*.
+Selama sesi aktif, decay loop sudah memulihkan energi secara proporsional, sehingga pemain yang tidur
+7,5 menit lalu bangun awal tetap membawa ±50 energi — tanpa bonus penyelesaian.
+
 ---
 
 ## 🏆 3. Formula Skor Pengasuhan (*Care Score*)
@@ -191,7 +208,12 @@ dipulihkan penuh ke 100, plus careScore +10.
 | 5 | Ikatan Mistis Abadi | 魂の契り (Tamashii no Chigiri) | 850 | Aura pelangi spiritual & gelar kehormatan Inari. |
 
 Sumber poin bonding yang terverifikasi di kode:
-- **Mengelus kitsune**: +2 poin per tap (bersamaan dengan +5 EXP dan +3 happiness).
+- **Mengelus kitsune**: +2 poin per tap (bersamaan dengan +5 EXP dan +3 happiness) —
+  **reward dibatasi cooldown 2 menit per kitsune** (sejak 10 September 2026, modul
+  `src/utils/petAffectionCooldown.ts`; realisasi niat desain ROADMAP M9.5). Selama
+  cooldown, elusan tetap merespons (suara + animasi) tanpa reward apa pun. Cooldown
+  bertahan reload halaman (localStorage terpisah, diikat `pet.id`) dan otomatis reset
+  untuk pemain baru / generasi baru.
 - **Odekake**: `reward.bondingPoints` sesuai config perjalanan.
 - Progress bar, milestone berikutnya, dan persentase dihitung `getBondingLevelInfo`.
 

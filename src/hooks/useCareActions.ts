@@ -1,15 +1,22 @@
 /**
  * src/hooks/useCareActions.ts
- * Cluster aksi perawatan Kitsune: mengelus, memberi makan, mandi/bersih-bersih,
+ * Cluster aksi perawatan Kitsune: mengelus (dengan cooldown reward 2 menit via
+ * src/utils/petAffectionCooldown.ts), memberi makan, mandi/bersih-bersih,
  * tidur & bangun (dialog + toggle), serta blokir aktivitas saat tidur.
  * Diekstrak dari TatamiRoom.tsx (Mid-Term #4 follow-up) agar God component mengecil.
  */
 
+import { useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { PetData, FoodItem } from '../types/game';
 import { addPetExp, getBondingLevelInfo } from '../data/gameConfig';
 import { ModalKind } from '../components/tatami/modalRegistry';
 import { ShojiTransitionConfig } from '../components/ShojiTransition';
+import {
+  readPetAffectionTimestamp,
+  resolvePetAffection,
+  writePetAffectionTimestamp,
+} from '../utils/petAffectionCooldown';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
@@ -34,8 +41,38 @@ export function useCareActions({
   setActionState,
   setIsLanternOn,
 }: UseCareActionsOptions) {
-  // Pet action: Petting the Kitsune (+5 EXP)
+  // Cooldown reward elusan (fix eksploit spam-tap — realisasi niat desain ROADMAP M9.5).
+  // Ref = proteksi sesi yang selalu tersedia (mis. private mode);
+  // localStorage = bertahan reload, diikat ke pet.id (generasi baru bebas cooldown).
+  const lastPetRewardRef = useRef(0);
+
+  // Pet action: Petting the Kitsune (+5 EXP; reward dibatasi cooldown 2 menit)
   const handlePetClick = () => {
+    const now = Date.now();
+    const lastReward = Math.max(
+      lastPetRewardRef.current,
+      readPetAffectionTimestamp(pet.id)
+    );
+    const decision = resolvePetAffection(lastReward, now);
+
+    if (!decision.rewarded) {
+      // Selama cooldown: kitsune tetap merespons kasih sayang (suara + animasi senang),
+      // tetapi TANPA reward EXP/happiness/Kizuna — spam-tap tidak lagi menghasilkan apa pun.
+      soundEngine.playFoxChirp();
+      hapticEngine.softTap();
+      setActionState('happy');
+      showToast(
+        `Kon! ${pet.name} masih merasakan hangatnya elusanmu... tunggu ${Math.ceil(
+          decision.remainingMs / 1000
+        )} detik lagi ya! 💛`
+      );
+      setTimeout(() => setActionState('idle'), 1800);
+      return;
+    }
+
+    lastPetRewardRef.current = now;
+    writePetAffectionTimestamp(pet.id, now);
+
     soundEngine.playFoxChirp();
     hapticEngine.petPurr();
     setActionState('happy');
@@ -208,14 +245,24 @@ export function useCareActions({
     });
   };
 
-  // Complete Sleeping / Wake up from Bedroom Scene
+  // Complete Sleeping / Wake up from Bedroom Scene.
+  // energyGain/expGain diputuskan resolveSleepWakeReward (sleepReward.ts):
+  // bonus penuh hanya jika sesi 15 menit selesai; bangun awal = 0/0
+  // (akumulasi energi pasif decay loop tetap aman) → toast diberi label khusus
+  // agar "+0/+0" tidak terlihat seperti bug.
   const handleWakeUpFromBedroom = (energyGain: number, expGain: number) => {
     setIsLanternOn(true);
+    const wokeUpEarly = energyGain === 0 && expGain === 0;
     const expRes = addPetExp(pet.exp, pet.level, expGain);
+
     if (expRes.leveledUp) {
       soundEngine.playEvolutionFanfare();
       hapticEngine.evolution();
       showToast(`🎉 ${pet.name} bangun tidur dengan segar dan naik ke Level ${expRes.newLevel}!`);
+    } else if (wokeUpEarly) {
+      showToast(
+        `☀️ ${pet.name} terbangun sebelum tidurnya selesai — selesaikan 15 menit tidur untuk bonus pemulihan penuh!`
+      );
     } else {
       showToast(`☀️ ${pet.name} terbangun dengan bugar dan siap bermain! (+${Math.round(energyGain)} Energi, +${expGain} EXP)`);
     }
@@ -328,53 +375,6 @@ export function useCareActions({
     setTimeout(() => setActionState('idle'), 2400);
   };
 
-  // Sleeping toggle
-  const handleToggleSleep = () => {
-    soundEngine.playSleepChime();
-    hapticEngine.heavy();
-    const willSleep = !pet.isSleeping;
-
-    if (willSleep) {
-      setIsLanternOn(false);
-      setActionState('sleeping');
-      showToast(`${pet.name} bergelung tidur di atas futon hangat... Zzz`);
-
-      setPet((prev) => ({
-        ...prev,
-        isSleeping: true,
-        lastInteractionTime: Date.now(),
-      }));
-    } else {
-      setIsLanternOn(true);
-      setActionState('idle');
-      const expGain = 10;
-      const expRes = addPetExp(pet.exp, pet.level, expGain);
-
-      if (expRes.leveledUp) {
-        soundEngine.playEvolutionFanfare();
-        hapticEngine.evolution();
-        showToast(`🎉 ${pet.name} bangun tidur dengan segar dan naik ke Level ${expRes.newLevel}!`);
-      } else {
-        showToast(`${pet.name} terbangun dengan bugar! (+35 Energi, +${expGain} EXP)`);
-      }
-
-      setPet((prev) => {
-        const res = addPetExp(prev.exp, prev.level, expGain);
-        return {
-          ...prev,
-          isSleeping: false,
-          stats: {
-            ...prev.stats,
-            energy: Math.min(100, prev.stats.energy + 35),
-          },
-          exp: res.newExp,
-          level: res.newLevel,
-          lastInteractionTime: Date.now(),
-        };
-      });
-    }
-  };
-
   return {
     handlePetClick,
     handleFeedItem,
@@ -386,6 +386,5 @@ export function useCareActions({
     handleConfirmSleep,
     handleSleepButtonClick,
     handleCleanAndBath,
-    handleToggleSleep,
   };
 }

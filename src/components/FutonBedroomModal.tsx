@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Moon, Sun, Sparkles, BatteryCharging, BedDouble, Clock, ShoppingBag } from 'lucide-react';
 import { PetData } from '../types/game';
 import { KitsuneCanvas } from './KitsuneCanvas';
+import { resolveSleepWakeReward } from '../utils/sleepReward';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 
@@ -91,17 +92,26 @@ export const FutonBedroomModal: React.FC<FutonBedroomModalProps> = ({
     atmosphereOverride === 'auto' ? naturalIsDay : atmosphereOverride === 'day';
   const currentBgImage = isDayVisual ? bedroomFutonDay : bedroomFutonNight;
 
-  // Wake Up action & return to tatami room
+  // Wake Up action & return to tatami room.
+  // Reward diputuskan oleh fungsi murni resolveSleepWakeReward dari WAKTU NYATA
+  // (fix eksploit bangun-awal): sesi 15 menit selesai = bonus penuh (+14 EXP &
+  // energi tambahan); bangun awal = bonus 0/0 — energi akumulasi pasif decay
+  // loop tetap aman. Bar `energyProgress` kini murni visual.
   const handleWakeUp = () => {
     soundEngine.playEvolutionFanfare();
     hapticEngine.heavy();
-    const energyGain = Math.max(25, 100 - pet.stats.energy);
-    const expGain = 14;
-    onWakeUp(energyGain, expGain);
+    const reward = resolveSleepWakeReward(
+      Date.now(),
+      pet.sleepUntilTimestamp,
+      pet.stats.energy
+    );
+    onWakeUp(reward.energyGain, reward.expGain);
     onClose();
   };
 
-  // Pat gentle head during sleep
+  // Pat gentle head during sleep — kosmetik murni: hanya suara/purr & bar visual
+  // (`energyProgress`). TIDAK memengaruhi reward bangun (yang kini dihitung dari
+  // waktu nyata), sehingga spam-pat tidak lagi berdampak ekonomi apa pun.
   const handleGentlePet = () => {
     soundEngine.playFoxChirp();
     hapticEngine.petPurr();
@@ -313,13 +323,14 @@ export const FutonBedroomModal: React.FC<FutonBedroomModalProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span className="text-[11px]">
-              {remainingSeconds === 0 ? 'Bangunkan Segar' : 'Bangunkan Awal'}
+              {remainingSeconds === 0 ? 'Bangunkan Segar' : 'Bangunkan Awal (Tanpa Bonus)'}
             </span>
           </button>
         </div>
 
         <p className="text-[10px] text-center text-stone-400">
-          Durasi tidur 15 menit. Kamu bebas berbelanja di Toko Tanuki atau menikmati musik sementara {pet.name} beristirahat.
+          Durasi tidur 15 menit — selesaikan penuh untuk bonus pemulihan & EXP. Kamu bebas berbelanja
+          di Toko Tanuki atau menikmati musik sementara {pet.name} beristirahat.
         </p>
       </footer>
     </div>
