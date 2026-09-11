@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, BookOpen, Sparkles, Home, Scroll, Compass, Smartphone, Volume2, Shield } from 'lucide-react';
+import { X, BookOpen, Sparkles, Home, Scroll, Compass, Smartphone, Volume2, Shield, Sun, Moon } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
+
+// Sanctuary Menu Artworks (Day & Night)
+import sanctuaryMenuDay from '../assets/images/sanctuary_menu_day_1789149242054.webp';
+import sanctuaryMenuNight from '../assets/images/sanctuary_menu_night_1789149260244.webp';
 
 interface SanctuaryMenuModalProps {
   isOpen: boolean;
@@ -47,7 +51,32 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
   onCycleSeason,
   currentSeason = 'spring',
 }) => {
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  // Atmosphere toggle: auto (by local clock), day, or night
+  const [atmosphereOverride, setAtmosphereOverride] = useState<'auto' | 'day' | 'night'>('auto');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  // Day / Night cycle based on agreed rule: 06.00 - 17.59 = Day, 18.00 - 05.59 = Night
+  const currentHour = currentTime.getHours();
+  const naturalIsDay = currentHour >= 6 && currentHour < 18;
+  const isDayVisual =
+    atmosphereOverride === 'auto'
+      ? naturalIsDay
+      : atmosphereOverride === 'day';
+
+  const currentBgImage = isDayVisual
+    ? sanctuaryMenuDay
+    : sanctuaryMenuNight;
 
   const menuItems = [
     {
@@ -246,7 +275,7 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
         {/* Backdrop click to close */}
         <div
           className="absolute inset-0"
@@ -256,12 +285,26 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
           }}
         />
 
+        {/* 1. FULL SCREEN BACKGROUND ARTWORK (Day & Night Sanctuary) */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <img
+            src={currentBgImage}
+            alt="Menu Fitur Santuari Fullscreen"
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover object-center filter brightness-95 saturate-[1.05] transition-all duration-700"
+          />
+          {/* Soft edge darkening for aesthetic focus */}
+          <div className="absolute inset-0 bg-gradient-to-b from-stone-950/40 via-transparent to-stone-950/60 pointer-events-none" />
+          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-stone-950/50 pointer-events-none" />
+        </div>
+
+        {/* 2. FLOATING SANCTUARY MENU PANEL (Centered Frosted Glass) */}
         <motion.div
           initial={{ scale: 0.92, opacity: 0, y: 15 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0, y: 15 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative z-10 w-full max-w-2xl max-h-[85vh] bg-[#1a120c] border-2 border-amber-600/80 rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col"
+          className="relative z-10 w-full max-w-2xl max-h-[85vh] bg-stone-950/85 backdrop-blur-xl border-2 border-amber-600/80 rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col"
         >
           {/* Header */}
           <div className="p-3 sm:p-4 bg-gradient-to-r from-[#2c1a11] via-[#381f13] to-[#24130b] border-b border-amber-700/60 flex items-center justify-between">
@@ -282,15 +325,46 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                soundEngine.playClick();
-                onClose();
-              }}
-              className="p-1.5 rounded-xl bg-stone-900/80 border border-stone-700 hover:border-amber-400 text-stone-300 hover:text-white transition-all cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* Day / Night Atmosphere Selector */}
+              <button
+                onClick={() => {
+                  soundEngine.playClick();
+                  setAtmosphereOverride((prev) => {
+                    if (prev === 'auto') return naturalIsDay ? 'night' : 'day';
+                    if (prev === 'day') return 'night';
+                    return 'auto';
+                  });
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
+                title="Ganti Suasana Waktu Santuari (Siang / Malam)"
+              >
+                {isDayVisual ? (
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden xs:inline">Siang</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-indigo-300" />
+                    <span className="hidden xs:inline">Malam</span>
+                  </>
+                )}
+                {atmosphereOverride !== 'auto' && (
+                  <span className="text-[9px] text-amber-400 font-normal">●</span>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  soundEngine.playClick();
+                  onClose();
+                }}
+                className="p-1.5 rounded-xl bg-stone-900/80 border border-stone-700 hover:border-amber-400 text-stone-300 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Grid of Features */}

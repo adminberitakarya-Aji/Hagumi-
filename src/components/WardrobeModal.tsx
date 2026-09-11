@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { X, Sparkles, Check, Lock, Coins, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Sparkles, Check, Lock, Coins, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { PetData, NeckAccessory, HeadAccessory, AccessoryItem } from '../types/game';
 import { ACCESSORIES_CATALOG, DEFAULT_UNLOCKED_ACCESSORIES } from '../data/gameConfig';
 import { soundEngine } from '../utils/soundEngine';
 import { KitsuneCanvas } from './KitsuneCanvas';
+
+// Modern Wardrobe Dressing Room Artworks (Day & Night)
+import wardrobeDressingDay from '../assets/images/wardrobe_dressing_day_1789148128674.webp';
+import wardrobeDressingNight from '../assets/images/wardrobe_dressing_night_1789148147452.webp';
 
 interface WardrobeModalProps {
   isOpen: boolean;
@@ -21,8 +25,32 @@ export const WardrobeModal: React.FC<WardrobeModalProps> = ({
   showToast,
 }) => {
   const [activeCategory, setActiveCategory] = useState<'neck' | 'head'>('neck');
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  // Atmosphere toggle: auto (by local clock), day, or night
+  const [atmosphereOverride, setAtmosphereOverride] = useState<'auto' | 'day' | 'night'>('auto');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Day / Night cycle based on agreed rule: 06.00 - 17.59 = Day, 18.00 - 05.59 = Night
+  const currentHour = currentTime.getHours();
+  const naturalIsDay = currentHour >= 6 && currentHour < 18;
+  const isDayVisual =
+    atmosphereOverride === 'auto'
+      ? naturalIsDay
+      : atmosphereOverride === 'day';
+
+  const currentBgImage = isDayVisual
+    ? wardrobeDressingDay
+    : wardrobeDressingNight;
 
   const unlockedList = pet.unlockedAccessories || DEFAULT_UNLOCKED_ACCESSORIES;
   const currentNeck = pet.accessories?.neck || 'none';
@@ -103,8 +131,22 @@ export const WardrobeModal: React.FC<WardrobeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-[#1c1613] border-2 border-amber-600/70 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[94dvh] overflow-hidden text-stone-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in">
+      {/* 1. FULL SCREEN BACKGROUND ARTWORK (Day & Night Wardrobe Dressing) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src={currentBgImage}
+          alt="Ruang Ganti Lemari Busana Kitsune Fullscreen"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover object-center filter brightness-95 saturate-[1.05] transition-all duration-700"
+        />
+        {/* Soft edge darkening for aesthetic focus */}
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/40 via-transparent to-stone-950/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-radial from-transparent via-transparent to-stone-950/50 pointer-events-none" />
+      </div>
+
+      {/* 2. FLOATING WARDROBE PANEL (Centered Frosted Glass) */}
+      <div className="relative z-10 w-full max-w-2xl bg-stone-950/85 backdrop-blur-xl border-2 border-amber-600/70 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[94dvh] overflow-hidden text-stone-100">
         {/* Header */}
         <div className="p-3 sm:p-4 bg-gradient-to-r from-[#2a1b14] via-[#352219] to-[#2a1b14] border-b border-amber-700/60 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -132,6 +174,35 @@ export const WardrobeModal: React.FC<WardrobeModalProps> = ({
               <Coins className="w-3.5 h-3.5 text-amber-400" />
               <span>{pet.coins} Ryo</span>
             </div>
+
+            {/* Day / Night Atmosphere Selector */}
+            <button
+              onClick={() => {
+                soundEngine.playClick();
+                setAtmosphereOverride((prev) => {
+                  if (prev === 'auto') return naturalIsDay ? 'night' : 'day';
+                  if (prev === 'day') return 'night';
+                  return 'auto';
+                });
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
+              title="Ganti Suasana Waktu Lemari (Siang / Malam)"
+            >
+              {isDayVisual ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden xs:inline">Siang</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="hidden xs:inline">Malam</span>
+                </>
+              )}
+              {atmosphereOverride !== 'auto' && (
+                <span className="text-[9px] text-amber-400 font-normal">●</span>
+              )}
+            </button>
 
             <button
               onClick={() => {

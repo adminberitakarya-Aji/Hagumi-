@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Sparkles,
@@ -18,6 +18,8 @@ import {
   Sparkle,
   Trees,
   List,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { PetData, OmikujiResult, ShrineWish, WishCategory } from '../types/game';
 import {
@@ -28,6 +30,10 @@ import {
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
 import EmaTreeCanvas from './EmaTreeCanvas';
+
+// Inari Shrine Sanctuary Artworks (Day & Night)
+import shrineInariDay from '../assets/images/shrine_inari_day_1789148529383.webp';
+import shrineInariNight from '../assets/images/shrine_inari_night_1789148545920.webp';
 
 interface ShrineModalProps {
   isOpen: boolean;
@@ -47,6 +53,9 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
   onOmikujiDrawn,
 }) => {
   const [tab, setTab] = useState<'omikuji' | 'ema' | 'chat' | 'kizuna'>('omikuji');
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  // Atmosphere toggle: auto (by local clock), day, or night
+  const [atmosphereOverride, setAtmosphereOverride] = useState<'auto' | 'day' | 'night'>('auto');
 
   // Omikuji State
   const [omikuji, setOmikuji] = useState<OmikujiResult | null>(null);
@@ -73,7 +82,28 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
   const [inputMessage, setInputMessage] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  // Day / Night cycle based on agreed rule: 06.00 - 17.59 = Day, 18.00 - 05.59 = Night
+  const currentHour = currentTime.getHours();
+  const naturalIsDay = currentHour >= 6 && currentHour < 18;
+  const isDayVisual =
+    atmosphereOverride === 'auto'
+      ? naturalIsDay
+      : atmosphereOverride === 'day';
+
+  const currentBgImage = isDayVisual
+    ? shrineInariDay
+    : shrineInariNight;
 
   const currentBondInfo = getBondingLevelInfo(pet.bondingPoints ?? 120);
 
@@ -359,8 +389,22 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
   const activeWishes = pet.shrineWishes || DEFAULT_SHRINE_WISHES;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-6 overflow-y-auto animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-gradient-to-b from-[#2a1d17] via-[#1c1410] to-[#120c09] text-stone-100 rounded-3xl p-3.5 sm:p-6 shadow-2xl border-2 border-amber-600/70 max-h-[96vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 overflow-hidden animate-in fade-in">
+      {/* 1. FULL SCREEN BACKGROUND ARTWORK (Day & Night Inari Shrine) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src={currentBgImage}
+          alt="Kuil Penjaga Inari Fullscreen"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover object-center filter brightness-95 saturate-[1.05] transition-all duration-700"
+        />
+        {/* Soft edge darkening for aesthetic focus */}
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/40 via-transparent to-stone-950/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-radial from-transparent via-transparent to-stone-950/50 pointer-events-none" />
+      </div>
+
+      {/* 2. FLOATING SHRINE PANEL (Centered Frosted Glass) */}
+      <div className="relative z-10 w-full max-w-2xl bg-stone-950/85 backdrop-blur-xl text-stone-100 rounded-3xl p-3.5 sm:p-6 shadow-2xl border-2 border-amber-600/70 max-h-[96vh] flex flex-col">
         {/* Top Shrine Header */}
         <div className="flex items-center justify-between pb-3 border-b border-amber-900/50 mb-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
@@ -389,15 +433,46 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              soundEngine.playClick();
-              onClose();
-            }}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-stone-800 text-stone-400 hover:text-stone-200 transition-all cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Day / Night Atmosphere Selector */}
+            <button
+              onClick={() => {
+                soundEngine.playClick();
+                setAtmosphereOverride((prev) => {
+                  if (prev === 'auto') return naturalIsDay ? 'night' : 'day';
+                  if (prev === 'day') return 'night';
+                  return 'auto';
+                });
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
+              title="Ganti Suasana Waktu Kuil (Siang / Malam)"
+            >
+              {isDayVisual ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden xs:inline">Siang</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="hidden xs:inline">Malam</span>
+                </>
+              )}
+              {atmosphereOverride !== 'auto' && (
+                <span className="text-[9px] text-amber-400 font-normal">●</span>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playClick();
+                onClose();
+              }}
+              className="p-1.5 sm:p-2 rounded-full hover:bg-stone-800 text-stone-400 hover:text-stone-200 transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation (4 Tabs) */}
