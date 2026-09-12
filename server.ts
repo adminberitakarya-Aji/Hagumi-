@@ -9,17 +9,25 @@ import {
   parsePositiveIntEnv,
   sanitizeInputString,
 } from './src/server/rateLimiter';
+import { pickFallbackOmikuji, validateOmikujiPayload } from './src/server/omikuji';
+import { securityHeaders } from './src/server/securityHeaders';
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+// B1 (Revisi 7/8): port dari env — Cloud Run menyuntik `PORT` via environment;
+// fallback 3000 hanya untuk lokal. Tidak lagi hardcoded.
+const PORT = parsePositiveIntEnv('PORT', 3000);
 
 // Trust proxy for accurate client IP resolution behind Google Cloud Run / reverse proxies
 app.set('trust proxy', 1);
 
 // Tighten request payload limit to 1MB
 app.use(express.json({ limit: '1mb' }));
+
+// B3 (Revisi 7/8): security headers — nosniff, anti-clickjacking, referrer policy,
+// HSTS + CSP di produksi (CSP dilewati di dev agar Vite HMR tetap berfungsi).
+app.use(securityHeaders(process.env.NODE_ENV === 'production'));
 
 // Global rate limiter for all Gemini AI endpoints (default: 45 req / 15 min per IP)
 // Env override: AI_RATE_GLOBAL_MAX
@@ -350,31 +358,13 @@ Return JSON with:
       },
     });
 
-    const parsed = JSON.parse(response.text || '{}');
-    res.json(parsed);
-  } catch (err: any) {
-    // Fallback fortunes
-    const fortunes = [
-      {
-        blessing: 'Daikichi (Berkah Agung / Great Blessing)',
-        poem: 'Api rubah menari di bawah rembulan,\nLangkahmu diberkahi ketenangan dan keberanian.',
-        advice: 'Hari ini adalah waktu terbaik untuk memulai kebiasaan baik baru.',
-        luckyItem: 'Aburaage (Tahu Goreng Gurih)',
-      },
-      {
-        blessing: 'Chukichi (Berkah Menengah / Middle Blessing)',
-        poem: 'Kelopak sakura melayang lembut di tatami,\nRezeki datang bagi hati yang gemar berbagi.',
-        advice: 'Luangkan waktu untuk beristirahat dan menyeduh teh hangat.',
-        luckyItem: 'Cangkir Ocha Hijau',
-      },
-      {
-        blessing: 'Kichi (Keberuntungan Baik / Good Fortune)',
-        poem: 'Lonceng kuil berdentang di senja temaram,\nSemua niat tulus berujung pada damai tenteram.',
-        advice: 'Tetap rawat kitsune-mu dengan penuh kesabaran.',
-        luckyItem: 'Jimat Omamori Merah',
-      },
-    ];
-    res.json(fortunes[Math.floor(Math.random() * fortunes.length)]);
+    // B2 (Revisi 7/8): validasi BENTUK payload — JSON valid dari AI dengan field
+    // salah/hilang tidak lagi diteruskan ke klien; bentuk tak valid → fallback lokal
+    // (fallback yang sama dipakai saat parse gagal / AI error).
+    const parsed: unknown = JSON.parse(response.text || '{}');
+    res.json(validateOmikujiPayload(parsed) ?? pickFallbackOmikuji());
+  } catch {
+    res.json(pickFallbackOmikuji());
   }
 });
 
