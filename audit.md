@@ -9,6 +9,8 @@
 > **Revisi 4**: Audit lanjutan independen (10 September 2026) menemukan 3 temuan baru yang TIDAK tercakup di laporan ini, dan seluruhnya telah diremediasi: **(1) Bug hadiah Prolog lenyap** — `handleClaimBlessingReward`/`handleSaveEmaPrayer` di `App.tsx` menjadi no-op saat `pet` masih `null` (pemain baru yang mengklaim reward sebelum penetasan telur kehilangan bonus koin Omamori & careScore Ema diam-diam); diperbaiki dengan buffer `pendingPrologueRewards` + `useEffect` flush otomatis saat pet tersedia. **(2) Aset mati ±2,4 MB** — `bedroom_futon_day_1788726680718.jpg`, `onsen_bath_day_1788726650268.jpg`, `onsen_bath_night_1788726665859.jpg` tidak di-import komponen mana pun; dihapus. **(3) Aset gambar tidak teroptimasi** — 15,44 MB JPG (700 KB–1,1 MB/file) dikonversi ke WebP (max 1920px, quality 80) → **2,15 MB (−86%)**; bundle `dist/assets` 14,2 MB → 3,18 MB; ditambah script reusable `scripts/optimize-images.mjs` (`npm run optimize:images`) + `public/og_image.jpg` (1200×630, 154 KB) untuk meta tag `og:image`/`twitter:image`. Diverifikasi: `tsc --noEmit` 0 error, 79/79 test lulus, build sukses. Detail di bagian 5 (Temuan Audit Lanjutan).
 > **Revisi 5**: Temuan audit lanjutan #4 (bundle JS 867 KB + CSS 218 KB, 19 modal di-bundle statis lewat `ModalLayer.tsx`) selesai — 19 modal dikonversi ke `React.lazy` (1 chunk per modal) dengan gating **mount-on-first-open** (`everOpenedModal`) + **prefetch saat idle** (`requestIdleCallback`) agar pattern render `isOpen` tidak mem-fetch semua chunk sekaligus; 4 layar kondisional level-App (Torii Prolog, Altar Telur, EvolutionModal, OfflineReturnModal) ikut lazy dengan fallback boot santuari; import mati `SanctuaryMenuModal` di `TatamiRoom.tsx` dihapus. Hasil: **bundle utama 867,8 → 542,0 KB (−37,5%; gzip 236,7 → 160,9 KB)**, ±40 chunk lazy on-demand. Audit CSS: 218 KB (gzip 23,6 KB) terbukti utility yang benar-benar dipakai (file markdown hanya memuat 1 baris token mirip-class — bukan penyumbang); ditambahkan guard `@source not` untuk `docs/`, `audit.md`, `ROADMAP.md`, `DOKUMENTASI_GAME.md`, `scripts/` di `index.css` sebagai preventif. Diverifikasi: `tsc --noEmit` 0 error, 79/79 test lulus, build sukses. Detail di bagian 5 (item #4).
 
+> **Revisi 6**: Batch aksesibilitas 3 tahap (1: aria dinamis + live region + jalur keyboard; 2: Mode "Teks Besar" + caption intro Sensu; 3: audit `title=`-only di 19 modal + `prefers-reduced-motion` penuh untuk partikel musim) **SELESAI** — diverifikasi `tsc --noEmit` 0 error, 105/105 test, build produksi sukses; cakupan `aria-*`/`role=` **17 → 118**, `aria-live` 1 → 3; di-commit `46c9809` dan di-push ke `origin/master`. **Temuan #1 (aksesibilitas) dinyatakan LUNAS** dan dikeluarkan dari daftar kerja. Prioritas kerja berikutnya disusun ulang berbasis verifikasi ulang seluruh temuan terhadap kode aktual → **bagian 7 (P1–P8, effort-to-impact)**. Ditemukan doc drift baru: `ROADMAP.md` M4 mengklaim "Hadiah Kehadiran Harian ✅" padahal tidak ada kodenya (detail §7.1 F4). Item Long-Term "Aktivitas Discipline" ikut ditandai selesai (sudah direalisasi commit `5f318aa`).
+
 ---
 
 ## Ringkasan Eksekutif
@@ -18,6 +20,8 @@
 | Stack | React 19 + TypeScript (strict) + Vite 6 + Tailwind CSS 4 + Express + Gemini API |
 | Skala kode | ±19.500 baris TS/TSX di `src/`, 60+ file, 30+ komponen modal/scene |
 | Status `tsc --noEmit` | ✅ Bersih, 0 error (strict mode aktif) |
+| Unit test | ✅ 105/105 lulus (Vitest — 5 file formula gameplay murni) |
+| Cakupan Aksesibilitas | ✅ **118** atribut `aria-*`/`role=` + 3 `aria-live` (Revisi 6; sebelumnya 17 / 1) |
 | Skor UI/UX | **8.5 / 10** |
 | Skor Alur / Flow | **8 / 10** |
 | **Tier Project** | **B+ — "Advanced Indie Prototype / Vertical Slice berkualitas Shippable"** |
@@ -175,7 +179,7 @@ Audit lanjutan independen (10 September 2026, read-only dulu, lalu diremediasi d
 - [ ] PWA: `manifest.json` + Service Worker (sudah di roadmap).
 - [ ] Cloud save & sinkronisasi lintas perangkat (sudah di roadmap).
 - [ ] Sistem daily quest / endgame reinkarnasi (pacing late-game).
-- [ ] Aktivitas untuk menghidupkan stat Discipline.
+- [x] Aktivitas untuk menghidupkan stat Discipline. **(Revisi 6: SELESAI — commit `5f318aa`: meditasi Zen +15/dengan cooldown harian, Wanage +8/+4, Jimat Omamori +10, penurun lembut ber-floor 10; ditest 82 → 105 lulus.)**
 
 ---
 
@@ -212,6 +216,60 @@ Testing dan aksesibilitas adalah investasi besar — realistis untuk backlog, bu
 ---
 
 *Laporan asli murni bersifat audit read-only. Pengecualian Revisi 4: perbaikan temuan #1–#3 (lihat bagian 5, "Temuan Audit Lanjutan") menyentuh codebase dengan persetujuan pemilik — perubahan terdokumentasi di `git status`/commit terkait.*
+
+---
+
+## 7️⃣ ROADMAP PRIORITAS LANJUTAN — P1–P8 (Effort-to-Impact)
+
+> **Revisi 6 — 12 September 2026 (commit `46c9809`)**. Prioritas disusun ulang setelah verifikasi
+> ulang seluruh temuan terhadap kode aktual. Item aksesibilitas (temuan #1) dinyatakan **LUNAS**
+> dan dikeluarkan dari daftar kerja. Bagian ini menjadi acuan kerja berikutnya, menggantikan tabel
+> prioritas lama di bagian 5. Checkbox ⬜/✅ dipakai untuk melacak remediasi dengan pola yang sama.
+
+### 7.1 Status Verifikasi Temuan (klaim vs fakta kode, 12 Sep 2026)
+
+**Temuan teknis lama:**
+
+| # | Temuan | Status di kode (terverifikasi) | Prioritas |
+|---|---|---|---|
+| 1 | Aksesibilitas tipis (17 `aria-*` / 1 `aria-live`) | ✅ **LUNAS (Revisi 6)** — 118 atribut (×7), 3 `aria-live`, canvas `role="img"` + `aria-label` dinamis, bubble pikiran & elus keyboard-accessible (tombol overlay + pad "Elus"), `role="meter"` 6 stat vital, 19 modal + header/dock/Sensu bebas `title=`-only, banner status ber-`role`, partikel musim hormat `prefers-reduced-motion`, Mode Teks Besar global | — |
+| 2 | Belum PWA / installable | ✅ Konfirmasi: `public/manifest.json` & SW tidak ada; `index.html` tanpa `<link rel="manifest">` | **P1** |
+| 3 | Single-device save | ✅ Konfirmasi: 100% `localStorage`; satu-satunya jembatan lintas perangkat = ekspor/impor JSON manual (`BackupRestoreModal`) | P7 |
+| 4 | Tidak ada test UI/komponen | ✅ Konfirmasi: 0 `*.test.tsx`, `@testing-library` tidak terpasang; 105 test semuanya fungsi murni | **P3** |
+| 5 | God component berat | ✅ Konfirmasi (ukuran terkini): `TatamiRoom` 36,1 KB, `ShrineModal` 44,2 KB, `MatsuriGamesModal` 43,1 KB | P3 (menempel) |
+| 6 | Main chunk >500 KB | ✅ Konfirmasi: **548,65 KB** minified (naik ±7 KB dari batch a11y); `soundEngine.ts` (50 KB) masih eager | **P6** |
+| 7 | i18n hardcoded ID/JA/EN | ✅ Konfirmasi: copy inline di 60+ file, tanpa lapisan i18n | P8 (defer) |
+
+**Temuan alur/flow:**
+
+| # | Temuan | Status verifikasi | Prioritas |
+|---|---|---|---|
+| F1 | Pemain baru langsung dihadapkan 19 tujuan modal pasca-penetasan | ✅ Benar — tidak ada quest/penunjuk terpandu pasca-penetasan (Prolog & Altar Telur berhenti sebelum momen ini) | **P2** |
+| F2 | Konsekuensi abai tidak terasa (health floor 10, no-death) | ✅ Benar — Nogitsune ada sebagai cabang evolusi, tapi UI tidak menegaskan bahwa careScore menentukan takdir | P2 (menempel) |
+| F3 | Tidak ada preview evolusi ("Pertimbangan Inari") | ✅ Benar — `determineNextEvolution` hanya dipakai sebagai trigger internal di `App.tsx` | P2 (menempel) |
+| F4 | Daily quest & streak belum ada | ✅ Benar — kategori `'daily'` di `gameConfig.ts` hanyalah kategori album Memory Scroll, bukan quest. ⚠️ **DOC DRIFT BARU**: `ROADMAP.md` M4 mengklaim "Hadiah Kehadiran Harian ✅" padahal tidak ada kodenya — dokumen perlu dikoreksi (atau fitur diimplementasikan) | **P4** |
+| F5 | Endgame tidak mengikat | ⚠️ Sebagian benar — reinkarnasi/`generation` **sudah ada** (schema save, `EggAltarModal`, `HankoAlbumModal`) tapi tidak terikat aktivitas harian | P5 |
+
+### 7.2 Urutan Prioritas P1–P8
+
+| Urutan | Item | Alasan effort-to-impact | Dependensi |
+|---|---|---|---|
+| ✅ **P1** | **PWA + ikon homescreen** — `manifest.json` + Service Worker (precache aset, offline shell) **(SELESAI — Revisi 6)**: `public/manifest.json` (standalone, tema `#1c1815`, ikon 192/512/maskable dari `favicon.svg` via `npm run generate:icons`/sharp); `public/sw.js` hand-rolled tanpa dependensi (navigasi network-first dengan fallback offline, aset statis cache-first + runtime caching, `/api/*` selalu jaringan, cleanup cache lama, skipWaiting); registrasi di `main.tsx` (hanya PROD); `index.html` + apple-touch-icon & meta iOS | Dampak retensi terbesar (install-to-homescreen, fondasi push pengingat); effort moderat; self-contained, tidak menyentuh schema save | — |
+| ⬜ **P2** | **Onboarding & transparansi evolusi**: first-session quest garis lurus ("Beri makan → Mandikan → 1 mini-game") dengan penunjuk berkedip; layar "Pertimbangan Inari" (preview deterministik: "Disiplin ≥ 70 saat dewasa → Zenko"); pertegas konsekuensi naratif (Nogitsune sebagai wabi-sabi hasil pengasuhan) | Tiga item flow yang saling melengkapi; **UI-only tanpa perubahan schema save** — murah dan langsung terasa oleh pemain baru | — |
+| ⬜ **P3** | **Setup React Testing Library + test komponen inti** (onboarding, ModalLayer open/close, dock/Sensu) — lalu split `ShrineModal` & `MatsuriGamesModal` | Test dilakukan **SEBELUM** refactor agar pemecahan god component dilindungi dari regresi | — |
+| ⬜ **P4** | **Daily quest + streak** (1–2 quest ringan; meditasi Zen sudah setengah-quest) + koreksi doc drift ROADMAP M4 | Butuh schema save v4 — infrastruktur migrasi (v1→v3) sudah ada & teruji; menutup celah retensi D7+ | P3 (dilindungi test) |
+| ⬜ **P5** | **Endgame binding**: daily quest → generasi baru dengan bonus silsilah | Pacing reinkarnasi baru mengikat jika ada aktivitas harian yang mengikat | P4 |
+| ✅ **P6** | **Lazy-load `soundEngine.ts` + split main chunk** di bawah 500 KB **(SELESAI dengan catatan — Revisi 6)**: `manualChunks` vendor (react/motion/lucide) di `vite.config.ts` → chunk utama **548,7 → 428,2 KB (−22%)**, warning Rollup hilang, cache vendor granular & stabil. *Catatan jujur*: deep lazy `soundEngine` (±20 file import sinkron) **ditunda ke era P3** — butuh refactor luas dan belum ada perlindungan test komponen | Quick win kecil; ideal dikerjakan bersama P1 (satu area build/loading) | — |
+| ⬜ **P7** | **Cloud save & sinkronisasi lintas perangkat** | Upaya infrastruktur terbesar (akun/backend/Firestore); PWA dari P1 adalah fondasinya | P1 |
+| ⬜ **P8** | **i18n** | Hanya bernilai jika target pasar melebar; copy perlu stabil dulu; mahal jika dipaksakan sekarang | defer |
+
+### 7.3 Perubahan yang Menyertai Revisi 6
+
+- **Batch aksesibilitas 3 tahap** (rincian di bagian 5, temuan #1) — selesai & diverifikasi:
+  `tsc --noEmit` 0 error, 105/105 test, build produksi sukses; di-commit sebagai `46c9809`
+  dan di-push ke `origin/master` (push diverifikasi via `git ls-remote`).
+- Tidak ada perubahan gameplay, formula, maupun schema save pada revisi ini.
+- Dokumen ini hanya diperbarui (header, Ringkasan Eksekutif, Long-Term, dan bagian 7).
 
 
 
