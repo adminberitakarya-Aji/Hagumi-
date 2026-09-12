@@ -8,13 +8,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RotateCcw, Play, Coins } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEngine';
 import { hapticEngine } from '../../utils/hapticFeedback';
-
-interface TaikoNote {
-  id: number;
-  type: 'don' | 'ka';
-  x: number; // 0 to 100%
-  hit: boolean;
-}
+import {
+  findClosestUnhitNote,
+  judgeTaikoHit,
+  nextSpawnType,
+  calculateTaikoReward,
+  HIT_TARGET_X,
+  MISS_LINE_X,
+  type TaikoNote,
+} from '../../utils/matsuri/taikoLogic';
 
 export const TaikoRhythmGame: React.FC<{ onReward: (coins: number, hap: number) => void }> = ({
   onReward,
@@ -37,8 +39,6 @@ export const TaikoRhythmGame: React.FC<{ onReward: (coins: number, hap: number) 
   const lastSpawnTimeRef = useRef<number>(0);
   const gameEndTimeRef = useRef<number>(0);
   const nextNoteIdRef = useRef<number>(1);
-
-  const HIT_TARGET_X = 20; // 20% from the left
 
   // Start Taiko Game
   const startGame = () => {
@@ -79,51 +79,32 @@ export const TaikoRhythmGame: React.FC<{ onReward: (coins: number, hap: number) 
     }
     setTimeout(() => setDrumEffect(null), 100);
 
-    // Find closest unhit note
-    const unhitNotes = notesRef.current.filter((n) => !n.hit);
-    let bestNote: TaikoNote | null = null;
-    let minDistance = 999;
-
-    for (const note of unhitNotes) {
-      const dist = Math.abs(note.x - HIT_TARGET_X);
-      if (dist < minDistance && dist < 14) {
-        minDistance = dist;
-        bestNote = note;
-      }
-    }
-
-    if (bestNote) {
-      if (bestNote.type === hitType) {
-        bestNote.hit = true;
-        if (minDistance <= 4.5) {
+    // T2 (Revisi 8): logika judgment diekstrak ke utils/matsuri/taikoLogic.ts
+    const closest = findClosestUnhitNote(notesRef.current, HIT_TARGET_X);
+    if (closest) {
+      const result = judgeTaikoHit(closest.note.type, hitType, closest.distance, combo);
+      closest.note.hit = true;
+      if (result.judgment === 'wrong-type') {
+        // Wrong drum hit type!
+        setCombo(0);
+        setMissCount((m) => m + 1);
+        setLastJudgment({ text: '不可 MISS', color: 'text-rose-400' });
+      } else {
+        setScore((s) => s + result.points);
+        setCombo((c) => {
+          const next = result.nextCombo;
+          setMaxCombo((m) => Math.max(m, next));
+          return next;
+        });
+        if (result.judgment === 'perfect') {
           // PERFECT / 良 (Ryou)
-          const pts = 100 + Math.min(combo * 5, 100);
-          setScore((s) => s + pts);
-          setCombo((c) => {
-            const next = c + 1;
-            setMaxCombo((m) => Math.max(m, next));
-            return next;
-          });
           setPerfectCount((p) => p + 1);
           setLastJudgment({ text: '良！PERFECT', color: 'text-amber-300' });
         } else {
           // GOOD / 可 (Ka)
-          const pts = 50 + Math.min(combo * 2, 50);
-          setScore((s) => s + pts);
-          setCombo((c) => {
-            const next = c + 1;
-            setMaxCombo((m) => Math.max(m, next));
-            return next;
-          });
           setGoodCount((g) => g + 1);
           setLastJudgment({ text: '可！GOOD', color: 'text-sky-300' });
         }
-      } else {
-        // Wrong drum hit type!
-        bestNote.hit = true;
-        setCombo(0);
-        setMissCount((m) => m + 1);
-        setLastJudgment({ text: '不可 MISS', color: 'text-rose-400' });
       }
     }
   };
@@ -167,10 +148,9 @@ export const TaikoRhythmGame: React.FC<{ onReward: (coins: number, hap: number) 
         soundEngine.playShinobueFlute();
         setTimeout(() => soundEngine.playEvolutionFanfare(), 380);
 
-        // Calculate rewards
+        // Calculate rewards (formula di utils/matsuri/taikoLogic.ts)
         const finalScore = score;
-        const rewardCoins = Math.min(50, Math.max(15, Math.floor(finalScore / 70)));
-        const rewardHap = Math.min(45, Math.max(20, Math.floor(finalScore / 80)));
+        const { coins: rewardCoins, happiness: rewardHap } = calculateTaikoReward(finalScore);
         onReward(rewardCoins, rewardHap);
         return;
       }
@@ -179,8 +159,8 @@ export const TaikoRhythmGame: React.FC<{ onReward: (coins: number, hap: number) 
       const spawnInterval = 750; // ms per note
       if (now - lastSpawnTimeRef.current >= spawnInterval) {
         lastSpawnTimeRef.current = now;
-        // 65% chance DON, 35% chance KA
-        const type: 'don' | 'ka' = Math.random() > 0.35 ? 'don' : 'ka';
+        // 65% chance DON, 35% chance KA (logika di utils/matsuri/taikoLogic.ts)
+        const type: 'don' | 'ka' = nextSpawnType();
         notesRef.current.push({
           id: nextNoteIdRef.current++,
           type,
@@ -194,7 +174,7 @@ export const TaikoRhythmGame: React.FC<{ onReward: (coins: number, hap: number) 
       for (const note of notesRef.current) {
         note.x -= noteSpeed * dt;
         // Miss condition: note passed target zone without being hit
-        if (!note.hit && note.x < HIT_TARGET_X - 7) {
+        if (!note.hit && note.x < MISS_LINE_X) {
           note.hit = true;
           setCombo(0);
           setMissCount((m) => m + 1);

@@ -8,6 +8,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Coins } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEngine';
 import { hapticEngine } from '../../utils/hapticFeedback';
+import {
+  advanceHurdle,
+  calculateKitsuneDashReward,
+} from '../../utils/matsuri/kitsuneDashLogic';
 
 // --- MINI GAME 3: Kitsune Dash (Runner / Jumper) ---
 export const KitsuneDashGame: React.FC<{ onReward: (coins: number, hap: number) => void }> = ({
@@ -53,28 +57,29 @@ export const KitsuneDashGame: React.FC<{ onReward: (coins: number, hap: number) 
 
     const interval = setInterval(() => {
       setHurdleX((prevX) => {
-        const nextX = prevX - 6;
+        // Logika pergerakan/tabrakan diekstrak ke utils/matsuri/kitsuneDashLogic.ts
+        const step = advanceHurdle(prevX, foxYRef.current);
 
-        if (nextX <= -20) {
+        if (step.passed) {
           // Passed hurdle
           soundEngine.playCoin();
           setScore((s) => s + 1);
-          return 400 + Math.random() * 50;
+          return step.nextX;
         }
 
-        // Collision check (fox at x=40, width=30)
-        if (nextX > 25 && nextX < 65 && foxYRef.current < 30) {
+        if (step.collided) {
           // Crash! Trigger outside of updater
           setTimeout(() => {
             setGameOver(true);
             setIsPlaying(false);
             soundEngine.playEvolutionFanfare();
-            onReward(scoreRef.current * 6 + 10, scoreRef.current * 4 + 15);
+            const { coins, happiness } = calculateKitsuneDashReward(scoreRef.current);
+            onReward(coins, happiness);
           }, 0);
-          return nextX;
+          return step.nextX;
         }
 
-        return nextX;
+        return step.nextX;
       });
     }, 30);
 

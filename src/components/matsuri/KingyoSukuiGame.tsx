@@ -8,6 +8,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RotateCcw, Heart, Coins } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEngine';
 import { hapticEngine } from '../../utils/hapticFeedback';
+import {
+  spawnInitialFish,
+  moveFishes,
+  findCaughtFishId,
+  applyPoiDamage,
+  respawnFish,
+  calculateKingyoReward,
+  type KingyoFish,
+} from '../../utils/matsuri/kingyoLogic';
 
 // --- MINI GAME 1: Kingyo-sukui (Goldfish Scooping) ---
 export const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) => void }> = ({
@@ -17,9 +26,7 @@ export const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) 
   const [score, setScore] = useState(0);
   const [poiDurability, setPoiDurability] = useState(100);
   const [gameOver, setGameOver] = useState(false);
-  const [fishes, setFishes] = useState<
-    Array<{ id: number; x: number; y: number; vx: number; vy: number; color: string; size: number }>
-  >([]);
+  const [fishes, setFishes] = useState<KingyoFish[]>([]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -30,17 +37,8 @@ export const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) 
     setGameOver(false);
     setIsPlaying(true);
 
-    // Spawn 7 swimming goldfish
-    const initialFish = Array.from({ length: 7 }, (_, i) => ({
-      id: i,
-      x: 40 + Math.random() * 240,
-      y: 40 + Math.random() * 160,
-      vx: (Math.random() - 0.5) * 2.5,
-      vy: (Math.random() - 0.5) * 2.5,
-      color: i % 2 === 0 ? '#ea580c' : '#dc2626',
-      size: 14 + Math.random() * 8,
-    }));
-    setFishes(initialFish);
+    // Spawn 7 swimming goldfish (logika di utils/matsuri/kingyoLogic.ts)
+    setFishes(spawnInitialFish());
   };
 
   // Move fish tick
@@ -48,19 +46,7 @@ export const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) 
     if (!isPlaying || gameOver) return;
 
     const interval = setInterval(() => {
-      setFishes((prev) =>
-        prev.map((f) => {
-          let nextX = f.x + f.vx;
-          let nextY = f.y + f.vy;
-          let nextVx = f.vx;
-          let nextVy = f.vy;
-
-          if (nextX < 20 || nextX > 320) nextVx = -nextVx;
-          if (nextY < 20 || nextY > 200) nextVy = -nextVy;
-
-          return { ...f, x: nextX, y: nextY, vx: nextVx, vy: nextVy };
-        })
-      );
+      setFishes((prev) => moveFishes(prev));
     }, 40);
 
     return () => clearInterval(interval);
@@ -77,19 +63,12 @@ export const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) 
     soundEngine.playMatsuriPoiScoop();
     hapticEngine.water();
 
-    // Damage paper poi
-    const newDurability = Math.max(0, poiDurability - 18);
+    // Damage paper poi (logika di utils/matsuri/kingyoLogic.ts)
+    const newDurability = applyPoiDamage(poiDurability);
     setPoiDurability(newDurability);
 
     // Check hit fish
-    let caughtFishId = -1;
-    for (const fish of fishes) {
-      const dist = Math.hypot(fish.x - clickX, fish.y - clickY);
-      if (dist < 28) {
-        caughtFishId = fish.id;
-        break;
-      }
-    }
+    const caughtFishId = findCaughtFishId(fishes, clickX, clickY);
 
     if (caughtFishId !== -1) {
       soundEngine.playShinobueFlute();
@@ -97,27 +76,14 @@ export const KingyoSukuiGame: React.FC<{ onReward: (coins: number, hap: number) 
       const newScore = score + 1;
       setScore(newScore);
       // Respawn fish
-      setFishes((prev) =>
-        prev.map((f) =>
-          f.id === caughtFishId
-            ? {
-                ...f,
-                x: 40 + Math.random() * 240,
-                y: 40 + Math.random() * 160,
-                vx: (Math.random() - 0.5) * 3,
-                vy: (Math.random() - 0.5) * 3,
-              }
-            : f
-        )
-      );
+      setFishes((prev) => prev.map((f) => respawnFish(f, caughtFishId)));
     }
 
     if (newDurability <= 0) {
-      // Game over!
+      // Game over! (formula reward di utils/matsuri/kingyoLogic.ts)
       setGameOver(true);
       setIsPlaying(false);
-      const coinsWon = score * 8 + 5;
-      const hapGained = score * 5 + 10;
+      const { coins: coinsWon, happiness: hapGained } = calculateKingyoReward(score);
       soundEngine.playEvolutionFanfare();
       onReward(coinsWon, hapGained);
     }

@@ -11,6 +11,44 @@
 
 > **Revisi 6**: Batch aksesibilitas 3 tahap (1: aria dinamis + live region + jalur keyboard; 2: Mode "Teks Besar" + caption intro Sensu; 3: audit `title=`-only di 19 modal + `prefers-reduced-motion` penuh untuk partikel musim) **SELESAI** — diverifikasi `tsc --noEmit` 0 error, 105/105 test, build produksi sukses; cakupan `aria-*`/`role=` **17 → 118**, `aria-live` 1 → 3; di-commit `46c9809` dan di-push ke `origin/master`. **Temuan #1 (aksesibilitas) dinyatakan LUNAS** dan dikeluarkan dari daftar kerja. Prioritas kerja berikutnya disusun ulang berbasis verifikasi ulang seluruh temuan terhadap kode aktual → **bagian 7 (P1–P8, effort-to-impact)**. Ditemukan doc drift baru: `ROADMAP.md` M4 mengklaim "Hadiah Kehadiran Harian ✅" padahal tidak ada kodenya (detail §7.1 F4). Item Long-Term "Aktivitas Discipline" ikut ditandai selesai (sudah direalisasi commit `5f318aa`).
 
+> **Revisi 7**: Audit independen eksternal (12 September 2026, commit `dcaf67b`) — read-only,
+> verifikasi hidup `tsc --noEmit` **0 error** dan Vitest **177 test / 14 file lulus lokal**
+> (⚠️ 3 file test — `SensuFanHUD`, `TatamiDock`, `InariConsiderationCard` — gagal start
+> forks worker lokal sehingga hanya 14/17 file tereksekusi; di CI 17 file lulus penuh —
+> flakiness pool dicatat sebagai temuan T3). **Tidak ada file source code yang diubah.**
+> Menghasilkan 16 temuan baru yang belum tercakup revisi 1–6, dikelompokkan dalam
+> bagian 8 (temuan) dan backlog P9–P10 (bagian 7). Klaim ganda difilter: cloud save
+> TIDAK diduplikasi (sudah tercakup P7 — temuan ini hanya memperkuat prioritasnya),
+> toast dismissible & konfirmasi reset & batch a11y terverifikasi SUDAH selesai di revisi 4–6.
+
+> **Revisi 8**: Remediasi item B1–B3 (bagian 8.1, backlog P9) **SELESAI** — (1) **B1**: port
+> kini `parsePositiveIntEnv('PORT', 3000)` (Cloud Run menyuntik `PORT`); ditambahkan ke
+> `.env.example`. (2) **B2**: modul murni `src/server/omikuji.ts` — `validateOmikujiPayload`
+> (4 field string non-kosong, batas panjang per field) + `pickFallbackOmikuji` (fallback
+> lokal dipindah dari inline handler); payload bentuk-tak-valid → fallback lokal, bukan
+> diteruskan ke klien. (3) **B3**: `src/server/securityHeaders.ts` — nosniff, X-Frame-Options
+> DENY, Referrer-Policy, Permissions-Policy (gyroscope/accelerometer SENGAJA tidak diblokir
+> agar parallax 2.5D mobile tetap jalan), HSTS + CSP produksi (CSP dilewati di dev agar Vite
+> HMR tidak rusak; font Google diizinkan). Tanpa dependensi baru (middleware manual, bukan
+> `helmet`). Test baru: `omikuji.test.ts` + `securityHeaders.test.ts`. Verifikasi: `tsc
+> --noEmit` 0 error, seluruh test lulus, build produksi sukses. Tidak ada perubahan gameplay,
+> schema save, maupun perilaku endpoint yang valid.
+
+> **Revisi 9**: Remediasi item T1–T3 (bagian 8.2, backlog P10) **SELESAI** — (1) **T3**: pool
+> Vitest `forks` → **`threads`** dengan `maxWorkers: 2` (Vitest 5: `poolOptions` sudah dihapus,
+> API-nya `maxWorkers` top-level); hasil: 24 file/256 test tereksekusi PENUH di lokal ±38 detik
+> (sebelumnya 160,9 dtk + 3 file terskip diam-diam). Include Vitest dibatasi ke `src/` agar
+> spec Playwright di `e2e/` tidak ikut terambil sebagai test Vitest. (2) **T2**: logika murni
+> keempat mini-game diekstrak ke `src/utils/matsuri/` (`taikoLogic`, `kingyoLogic`,
+> `wanageLogic`, `kitsuneDashLogic`) — komponen direfactor memakai modul ini TANPA perubahan
+> perilaku; +44 test (212 → 256). (3) **T1**: Playwright E2E — `playwright.config.ts`
+> (webServer `npm run dev` di :3000), `e2e/critical-flow.spec.ts` 3 test alur kritis:
+> onboarding penuh (Prolog → Altar Telur → menetas → Tatami Room), core loop save-seed v5
+> (HUD + buka/tutup modal Bento via Esc), dan verifikasi identitas/saldo koin dari save;
+> script `npm run test:e2e` + job CI `e2e` terpisah (chromium + upload trace saat gagal).
+> Hasil E2E lokal: **3/3 lulus**. Tanpa dependensi runtime baru (`@playwright/test` hanya
+> devDependency). Temuan minor baru dari E2E dicatat sebagai U5 (bagian 8.4).
+
 ---
 
 ## Ringkasan Eksekutif
@@ -262,6 +300,8 @@ Testing dan aksesibilitas adalah investasi besar — realistis untuk backlog, bu
 | ✅ **P6** | **Lazy-load `soundEngine.ts` + split main chunk** di bawah 500 KB **(SELESAI dengan catatan — Revisi 6)**: `manualChunks` vendor (react/motion/lucide) di `vite.config.ts` → chunk utama **548,7 → 428,2 KB (−22%)**, warning Rollup hilang, cache vendor granular & stabil. *Catatan jujur*: deep lazy `soundEngine` (±20 file import sinkron) **ditunda ke era P3** — butuh refactor luas dan belum ada perlindungan test komponen | Quick win kecil; ideal dikerjakan bersama P1 (satu area build/loading) | — |
 | ⬜ **P7** | **Cloud save & sinkronisasi lintas perangkat** | Upaya infrastruktur terbesar (akun/backend/Firestore); PWA dari P1 adalah fondasinya | P1 |
 | ⬜ **P8** | **i18n** | Hanya bernilai jika target pasar melebar; copy perlu stabil dulu; mahal jika dipaksakan sekarang | defer |
+| ✅ **P9** | **Security & robustness backend** — `process.env.PORT`, validasi bentuk JSON omikuji, security headers (helmet) **(SELESAI — Revisi 8)**: dilaksanakan tanpa dependensi baru — `parsePositiveIntEnv('PORT', 3000)`, modul murni `src/server/omikuji.ts` (validasi bentuk + fallback lokal, +12 test), `src/server/securityHeaders.ts` (nosniff/anti-clickjacking/referrer/permissions + HSTS & CSP produksi, +10 test); CSP dev dilewati demi Vite HMR | Tiga temuan kecil B1–B3 (bagian 8.1) bisa selesai dalam satu commit | B1–B3 |
+| ✅ **P10** | **Keandalan test & E2E** — stabilkan pool Vitest lokal (T3), lalu Playwright alur onboarding→evolusi (T1) + test logika mini-game (T2) **(SELESAI — Revisi 9)**: pool `threads` + `maxWorkers: 2` (24/24 file & 256 test penuh di lokal, ±38 dtk); logika 4 mini-game diekstrak ke `src/utils/matsuri/` (+44 test, komponen tanpa perubahan perilaku); Playwright E2E 3 test alur kritis lulus + job CI `e2e` terpisah | T3 dulu (kecil, mencegah sinyal regresi hilang), T1/T2 menyusul | T1–T3 |
 
 ### 7.3 Perubahan yang Menyertai Revisi 6
 
@@ -270,6 +310,69 @@ Testing dan aksesibilitas adalah investasi besar — realistis untuk backlog, bu
   dan di-push ke `origin/master` (push diverifikasi via `git ls-remote`).
 - Tidak ada perubahan gameplay, formula, maupun schema save pada revisi ini.
 - Dokumen ini hanya diperbarui (header, Ringkasan Eksekutif, Long-Term, dan bagian 7).
+
+---
+
+## 8️⃣ TEMUAN AUDIT INDEPENDEN EKSTERNAL — 12 September 2026 (Revisi 7)
+
+> Audit read-only terpisah dari penyusun revisi 1–6. Metode: penelusuran seluruh folder
+> (root, `docs/`, `src/`, `server.ts`, CI), verifikasi `tsc --noEmit` (0 error) & `vitest run`
+> (177/177 tereksekusi lulus), dan pembacaan kode inti (`gameConfig.ts`, `decayLoop.ts`,
+> `useGameLoop.ts`, `petSaveSchema.ts`, `server.ts`, komponen HUD/dock/mini-game).
+> Status: 🔴 = perlu tindakan, 🟡 = prioritas rendah–sedang, ⬜ = keputusan desain (diskusi dulu).
+
+### 8.1 Backend & Keamanan (`server.ts`)
+
+| # | Temuan | Detail | Severity | Upaya |
+|---|---|---|---|---|
+| B1 | ✅ ~~Port hardcoded `3000`~~ **(LUNAS — Revisi 8)** | `server.ts` kini `parsePositiveIntEnv('PORT', 3000)` (helper yang sudah ada di `rateLimiter.ts`); ditambahkan `PORT` ke `.env.example`. | ✅ Lunas | Kecil |
+| B2 | ✅ ~~`JSON.parse` tanpa validasi bentuk di `/api/kitsune/omikuji`~~ **(LUNAS — Revisi 8)** | Modul murni `src/server/omikuji.ts`: `validateOmikujiPayload(raw)` (4 field string non-kosong, batas panjang blessing 120 / poem 300 / advice 200 / luckyItem 80) + `pickFallbackOmikuji` (fallback lokal dipindah dari inline handler). Bentuk tak valid → fallback lokal; `catch` juga memakai fallback yang sama. Test: `src/server/omikuji.test.ts`. | ✅ Lunas | Kecil |
+| B3 | ✅ ~~Belum ada security headers~~ **(LUNAS — Revisi 8)** | `src/server/securityHeaders.ts` dipasang via middleware manual (tanpa `helmet` — tanpa dependensi baru): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (kamera/mikrofon/geolokasi mati; **gyroscope/accelerometer sengaja tidak diblokir** agar parallax 2.5D mobile tetap jalan), HSTS + CSP hanya di produksi (CSP dev dilewati agar Vite HMR tidak rusak; `style-src` mengizinkan fonts.googleapis.com + `font-src` fonts.gstatic.com sesuai `index.html`). Test: `src/server/securityHeaders.test.ts`. | ✅ Lunas | Kecil–sedang |
+
+### 8.2 Testing
+
+| # | Temuan | Detail | Severity | Upaya |
+|---|---|---|---|---|
+| T1 | ✅ ~~Tidak ada E2E test~~ **(LUNAS — Revisi 9)** | Playwright: `playwright.config.ts` + `e2e/critical-flow.spec.ts` (3 test: onboarding penuh Prolog → Altar Telur → menetas → Tatami Room; core loop save-seed v5 dengan modal Bento + Esc; verifikasi saldo koin seed). Script `npm run test:e2e`; job CI `e2e` (install chromium + upload trace). **3/3 lulus lokal.** | ✅ Lunas | Sedang–besar |
+| T2 | ✅ ~~4 mini-game tanpa unit test~~ **(LUNAS — Revisi 9)** | Logika murni diekstrak ke `src/utils/matsuri/`: `taikoLogic` (findClosestUnhitNote, judgeTaikoHit perfect/good/wrong-type, nextSpawnType, reward), `kingyoLogic` (spawn, moveFishes bounce, findCaughtFishId, poi damage/tier, respawn, reward), `wanageLogic` (sweet spot 30/60/85, power meter, bonus disiplin 8/4/0, reward), `kitsuneDashLogic` (tabrakan, advanceHurdle, reward). Komponen direfactor tanpa perubahan perilaku. **+44 test (212 → 256).** | ✅ Lunas | Sedang |
+| T3 | ✅ ~~Flakiness pool `forks` Vitest (lokal)~~ **(LUNAS — Revisi 9)** | `vitest.config.ts`: `pool: 'threads'` + `maxWorkers: 2` (Vitest 5 — `poolOptions` dihapus, pakai `maxWorkers` top-level). Hasil verifikasi: **24/24 file & 256 test tereksekusi penuh di lokal**, durasi 160,9 → ±38 detik. Include Vitest dibatasi `src/**` agar spec Playwright tidak ikut terambil. | ✅ Lunas | Kecil |
+
+### 8.3 Teknis & Performa
+
+| # | Temuan | Detail | Severity | Upaya |
+|---|---|---|---|---|
+| K1 | Fat files tersisa | `soundEngine.ts` ±2.500 baris; `ShrineModal.tsx` ±45 KB (split sudah ditunda di P3 dengan alasan yang sah — layak dieksekusi setelah punya test komponen sendiri). | 🟡 | Sedang |
+| K2 | Tidak ada re-sync saat tab kembali | Decay loop (`setInterval` 10 dtk) berhenti saat tab background; tidak ada listener `visibilitychange` yang menjalankan catch-up decay. Mitigasi hanya saat load (`applyOfflineDecay`). Pemain bisa melihat stat basi sampai refresh. | 🟡 | Kecil |
+| K3 | Offline hunger menyentuh floor penalti | Decay −43,2/jam vs regen makanan terbesar +40 sekali makan; pulang 6–8 jam → hunger ~15 (floor offline) + penalti happiness/health. Untuk desain cozy, pertimbangkan pelunakan (mis. floor 25–30 untuk pergi ≤ 24 jam). | ⬜ | Kecil |
+
+### 8.4 UI/UX
+
+| # | Temuan | Detail | Severity | Upaya |
+|---|---|---|---|---|
+| U1 | Densitas menu 19+ modal | Diakses dari HUD Sensu + dock; kelompokkan jadi tab (Rawat / Bermain / Koleksi / Pengaturan) atau submenu. | 🟡 | Sedang |
+| U2 | Kontras teks di latar gelap | Banyak `text-stone-400` + `text-xs` — berisiko gagal WCAG AA 4.5:1. Jalankan kontras checker dan angkat token warna yang gagal. | 🟠 | Kecil |
+| U3 | Discoverability fitur lanjutan | Odekake, Zen Garden, Shrine Pass tanpa badge "Baru!"/indikator — pemain bisa melewatkannya lama. | 🟡 | Kecil |
+| U4 | Header mobile padat (< 400px) | Identitas + 6 meter stat + koin + kontrol dalam satu baris; pertimbangkan ring/gauge mini di layar sempit. | 🟡 | Sedang |
+| U5 | Pembungkus `role="dialog"` berukuran 0×0 | `DialogA11yWrapper` (semua modal) merender div `role="dialog"` TANPA style — konten modal di dalamnya `fixed inset-0`, sehingga bbox pembungkus kosong. Otomasi/Playwright menganggap dialog "hidden" (konten sebenarnya tampil). Ditemukan saat E2E Revisi 9. Tidak berdampak ke pembaca layar (role & label tetap terbaca), tapi mengganggu tooling otomatis — solusi kandidat: pindahkan `role="dialog"` ke kontainer fixed modal masing-masing, atau beri pembungkus ukuran nyata. | 🟡 | Sedang |
+
+### 8.5 Keputusan Desain (butuh diskusi — jika dieksekusi, WAJIB perbarui `docs/02_GAMEPLAY_MECHANICS.md` di commit yang sama)
+
+| # | Temuan | Detail | Severity | Upaya |
+|---|---|---|---|---|
+| G1 | Pacing EXP mid-late | Reward aksi flat (+5 s/d +45 EXP) vs kurva `floor(40·L^1.35 + 60)` eksponensial → grind mati di level 30+. Kandidat: multiplier berbasis stage/Kizuna. | 🟠 | Sedang |
+| G2 | Stat Discipline nyaris mati | Decay hanya −0,01/tick saat terlala (floor 10); satu-satunya pompa besar = meditasi Zen +15/hari. Pertimbangkan aktivitas disiplin tambahan (ritual pagi, training ringan). | 🟠 | Sedang |
+| G3 | Opsi tidur singkat 5 menit | Tidur 15 menit real-time memblokir semua aksi; "Bangun Awal (Tanpa Bonus)" sudah jujur tapi tetap menggantungkan sesi pendek. Tawarkan tidur 5 menit + reward proporsional. | 🟡 | Kecil |
+| G4 | Transparansi AI offline vs online | Fallback lokal sudah bagus; beri label eksplisit di UI "ramalan lokal" vs "ramalan Inari (online)" agar ekspektasi pemain konsisten. | 🟡 | Kecil |
+| G5 | Endgame pasca-Tenko | Setelah 9 ekor, tujuan berikutnya hanya reinkarnasi. Kandidat: prestasi/medali ziarah permanen lintas generasi — infrastruktur Goshuincho (`ShrinePassModal`, `visitedShrines`) sudah ada. | 🟡 | Sedang |
+
+### 8.6 Catatan tentang Cloud Save
+
+Temuan "progres hanya di localStorage" **sengaja tidak diduplikasi** sebagai item baru —
+sudah tercakup sebagai backlog **P7** (bagian 7). Audit ini hanya memperkuat prioritasnya:
+`BackupRestoreModal` (manual) + `CORRUPT_SAVE_BACKUP_KEY` (save korup) adalah mitigasi yang
+baik, tetapi risiko kehilangan progres saat clear browser data tetap menjadi celah retensi
+terbesar menuju rilis publik.
+
 
 
 

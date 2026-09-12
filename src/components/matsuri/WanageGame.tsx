@@ -8,6 +8,11 @@ import React, { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEngine';
 import { hapticEngine } from '../../utils/hapticFeedback';
+import {
+  scoreWanageThrow,
+  advancePowerMeter,
+  calculateWanageReward,
+} from '../../utils/matsuri/wanageLogic';
 
 // --- MINI GAME 2: Wanage (Ring Toss) ---
 export const WanageGame: React.FC<{ onReward: (coins: number, hap: number, disciplineGained?: number) => void }> = ({ onReward }) => {
@@ -21,10 +26,7 @@ export const WanageGame: React.FC<{ onReward: (coins: number, hap: number, disci
   useEffect(() => {
     if (!isAiming || gameDone) return;
     const interval = setInterval(() => {
-      setPower((p) => {
-        const next = (p + 4) % 100;
-        return next;
-      });
+      setPower((p) => advancePowerMeter(p));
     }, 30);
     return () => clearInterval(interval);
   }, [isAiming, gameDone]);
@@ -33,11 +35,8 @@ export const WanageGame: React.FC<{ onReward: (coins: number, hap: number, disci
     if (ringsLeft <= 0 || gameDone) return;
     soundEngine.playClick();
 
-    // Calculate score based on power sweet spot (targets at 30, 60, 85)
-    let points = 0;
-    if (Math.abs(power - 30) < 10) points = 10; // Small Daruma
-    else if (Math.abs(power - 60) < 10) points = 25; // Tanuki Doll
-    else if (Math.abs(power - 85) < 8) points = 50; // Kitsune Golden Mask!
+    // Calculate score based on power sweet spot (logika di utils/matsuri/wanageLogic.ts)
+    const points = scoreWanageThrow(power);
 
     if (points > 0) {
       soundEngine.playCoin();
@@ -53,9 +52,9 @@ export const WanageGame: React.FC<{ onReward: (coins: number, hap: number, disci
       setIsAiming(false);
       soundEngine.playEvolutionFanfare();
       // Bonus disiplin: ketangkasan Wanage melatih fokus Kitsune (Revisi 4 bug #5).
-      // +8 jika tancapan bagus (skor ≥ 25), +4 jika cukup (≥ 12).
-      const disciplineBonus = nextScore >= 25 ? 8 : nextScore >= 12 ? 4 : 0;
-      onReward(Math.floor(nextScore * 0.8) + 10, nextScore + 15, disciplineBonus);
+      // Formula reward di utils/matsuri/wanageLogic.ts.
+      const { coins, happiness, discipline } = calculateWanageReward(nextScore);
+      onReward(coins, happiness, discipline);
     }
   };
 
