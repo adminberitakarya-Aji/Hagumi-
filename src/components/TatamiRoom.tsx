@@ -38,6 +38,9 @@ import { ModalLayer } from './tatami/ModalLayer';
 import { TatamiHeader } from './tatami/TatamiHeader';
 import { StatusBanners } from './tatami/StatusBanners';
 import { TatamiDock } from './tatami/TatamiDock';
+import { useFirstQuest } from '../hooks/useFirstQuest';
+import { FirstQuestBanner } from './tatami/FirstQuestBanner';
+import { InariConsiderationCard } from './tatami/InariConsiderationCard';
 import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
 import { MODAL_LABELS, type ModalKind } from './tatami/modalRegistry';
 
@@ -290,6 +293,22 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     setActionState,
     setIsLanternOn,
   });
+
+  // P2 (Revisi 6): Misi Pertama Pengasuh — tandai langkah saat aksi terkait selesai.
+  const firstQuest = useFirstQuest({ pet, setPet, showToast });
+  const handleFeedItemWithQuest = (item: FoodItem) => {
+    handleFeedItem(item);
+    firstQuest.markDone('feed');
+  };
+  const handleFinishBathWithQuest = (expGain: number, happinessGain: number) => {
+    handleFinishBath(expGain, happinessGain);
+    firstQuest.markDone('bath');
+  };
+  const handleCleanAndBathWithQuest = () => {
+    handleCleanAndBath();
+    firstQuest.markDone('bath');
+  };
+
   // Idle Thought Bubble tap → open the suggested modal
   const handleThoughtClick = (thoughtType: string, _thoughtText: string) => {
     soundEngine.playSuzuChime();
@@ -367,6 +386,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   // Mini games reward (Dynamic EXP based on performance)
   // disciplineGained (opsional): bonus disiplin dari Wanage performa bagus (Revisi 4 bug #5).
   const handleGameReward = (coinsEarned: number, hapGained: number, disciplineGained?: number) => {
+    firstQuest.markDone('minigame'); // P2 (Revisi 6): langkah mini-game Misi Pertama
     const expGain = Math.max(15, Math.floor(coinsEarned * 0.8) + 15);
     const expRes = addPetExp(pet.exp, pet.level, expGain);
 
@@ -723,6 +743,24 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
           </div>
         ))}
 
+        {/* P2 (Revisi 6): Misi Pertama Pengasuh — panduan 3 langkah untuk pemain baru */}
+        {firstQuest.visible && (
+          <FirstQuestBanner
+            pet={pet}
+            activeStep={firstQuest.activeStep ?? 'feed'}
+            progress={firstQuest.progress}
+            onStepClick={(step) => {
+              if (pet.isSleeping) {
+                handleSleepingActivityBlocked('Misi Pertama');
+                return;
+              }
+              if (step === 'feed') setActiveModal('bento');
+              else if (step === 'bath') handleOpenBathScene();
+              else setActiveModal('matsuri');
+            }}
+          />
+        )}
+
         {/* Kitsune Canvas Renderer (Midground subject layer) */}
         <div
           style={parallax.petStyle}
@@ -850,13 +888,16 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
               {/* Poop cleaning quick alert if dirty */}
               {pet.poopCount > 0 && (
                 <button
-                  onClick={handleCleanAndBath}
+                  onClick={handleCleanAndBathWithQuest}
                   className="mt-1 flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-900/90 border border-amber-500 text-amber-200 text-[10px] sm:text-xs font-bold shadow-lg hover:bg-amber-800 transition-all animate-bounce cursor-pointer flex-shrink-0"
                 >
                   <Trash2 className="w-3 h-3 text-amber-400" />
                   <span>Sapu {pet.poopCount} Kotoran Tatami</span>
                 </button>
               )}
+
+              {/* P2 (Revisi 6): Pertimbangan Inari — preview deterministik takdir evolusi */}
+              <InariConsiderationCard pet={pet} />
             </>
           )}
         </div>
@@ -903,8 +944,8 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
         season={season}
         onOpenPrologue={onOpenPrologue}
         handleCycleSeason={handleCycleSeason}
-        handleFeedItem={handleFeedItem}
-        handleFinishBath={handleFinishBath}
+        handleFeedItem={handleFeedItemWithQuest}
+        handleFinishBath={handleFinishBathWithQuest}
         handleWakeUpFromBedroom={handleWakeUpFromBedroom}
         handleBuyItem={handleBuyItem}
         handleOmikujiDrawn={handleOmikujiDrawn}

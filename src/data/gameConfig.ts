@@ -619,6 +619,58 @@ export function determineNextEvolution(
   return null;
 }
 
+/**
+ * P2 (Revisi 6): katalog transparansi evolusi untuk layar "Pertimbangan Inari".
+ * PENTING: threshold di bawah ini adalah CERMINAN dari determineNextEvolution()
+ * — jika threshold di atas berubah, perbarui juga di sini agar preview
+ * deterministik tidak menyesatkan pemain.
+ */
+export interface EvolutionBranchInfo {
+  form: KitsuneForm;
+  name: string;
+  japanese: string;
+  minCareScore: number;
+  minDiscipline?: number;
+  description: string;
+}
+
+export const REMAJA_EVOLUTION_BRANCHES: EvolutionBranchInfo[] = [
+  {
+    form: 'tenko',
+    name: 'Tenko (Rubah Surgawi 9 Ekor)',
+    japanese: '天狐',
+    minCareScore: 85,
+    description: 'Bentuk paling suci dan agung berekor sembilan pembawa berkah surgawi.',
+  },
+  {
+    form: 'zenko',
+    name: 'Zenko (Rubah Putih Kebajikan)',
+    japanese: '善狐',
+    minCareScore: 70,
+    minDiscipline: 70,
+    description: 'Rubah putih penolong yang setia menjaga kedamaian dan kesejahteraan.',
+  },
+  {
+    form: 'yako',
+    name: 'Yako (Rubah Liar Cerdik)',
+    japanese: '野狐',
+    minCareScore: 50,
+    description: 'Rubah berjiwa bebas yang jenaka, cerdik, dan gemar bermain teka-teki.',
+  },
+  {
+    form: 'nogitsune',
+    name: 'Nogitsune (Rubah Rimba Pegunungan)',
+    japanese: '野狐',
+    minCareScore: 0,
+    description: 'Rubah tangguh yang mandiri mengarungi lebatnya hutan bambu.',
+  },
+];
+
+export const STAGE_LEVEL_GOALS: Record<'bayi' | 'anak', { name: string; japanese: string; minLevel: number }> = {
+  bayi: { name: 'Kogitsune (Anak Rubah)', japanese: '子狐', minLevel: 3 },
+  anak: { name: 'Wakahitsune (Rubah Muda)', japanese: '若狐', minLevel: 6 },
+};
+
 // In-Game Hanko Seal Kanji Suggestions
 export const HANKO_KANJI_OPTIONS = [
   { kanji: '福', reading: 'Fuku', meaning: 'Keberuntungan' },
