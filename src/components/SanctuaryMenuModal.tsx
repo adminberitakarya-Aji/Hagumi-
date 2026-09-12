@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, BookOpen, Sparkles, Home, Scroll, Compass, Smartphone, Volume2, Shield, Sun, Moon } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import { hapticEngine } from '../utils/hapticFeedback';
+import { isTextScaleLarge, setTextScaleLarge } from '../utils/textScale';
 
 // Sanctuary Menu Artworks (Day & Night)
 import sanctuaryMenuDay from '../assets/images/sanctuary_menu_day_1789149242054.webp';
@@ -54,6 +55,8 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
   const [currentTime, setCurrentTime] = useState(() => new Date());
   // Atmosphere toggle: auto (by local clock), day, or night
   const [atmosphereOverride, setAtmosphereOverride] = useState<'auto' | 'day' | 'night'>('auto');
+  // A11y: Mode Teks Besar — persist di localStorage, diterapkan global via <html>.
+  const [isTextLarge, setIsTextLarge] = useState<boolean>(() => isTextScaleLarge());
 
   useEffect(() => {
     if (!isOpen) return;
@@ -326,6 +329,28 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5">
+              {/* A11y: Toggle Mode Teks Besar (menerapkan class global di <html>) */}
+              <button
+                onClick={() => {
+                  soundEngine.playClick();
+                  hapticEngine.tap();
+                  const next = !isTextLarge;
+                  setIsTextLarge(next);
+                  setTextScaleLarge(next);
+                }}
+                aria-pressed={isTextLarge}
+                title={isTextLarge ? 'Teks Besar aktif — ketuk untuk kembali normal' : 'Perbesar teks antarmuka'}
+                aria-label="Mode Teks Besar"
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-bold transition-all cursor-pointer shadow-sm ${
+                  isTextLarge
+                    ? 'bg-amber-900/80 border-amber-400 text-amber-100'
+                    : 'bg-black/60 hover:bg-black/80 border-amber-500/50 text-amber-200'
+                }`}
+              >
+                <span className="font-['Shippori_Mincho',serif] font-black">Aa</span>
+                <span className="hidden xs:inline">Teks Besar</span>
+              </button>
+
               {/* Day / Night Atmosphere Selector */}
               <button
                 onClick={() => {
@@ -338,6 +363,7 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
                 }}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
                 title="Ganti Suasana Waktu Santuari (Siang / Malam)"
+                aria-label="Ganti Suasana Waktu Santuari (Siang / Malam)"
               >
                 {isDayVisual ? (
                   <>
@@ -360,6 +386,7 @@ export const SanctuaryMenuModal: React.FC<SanctuaryMenuModalProps> = ({
                   soundEngine.playClick();
                   onClose();
                 }}
+                aria-label="Tutup Menu Fitur Santuari"
                 className="p-1.5 rounded-xl bg-stone-900/80 border border-stone-700 hover:border-amber-400 text-stone-300 hover:text-white transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />

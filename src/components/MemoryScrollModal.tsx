@@ -516,7 +516,8 @@ export const MemoryScrollModal: React.FC<MemoryScrollModalProps> = ({
                         onDeleteDiaryNote(note.id);
                       }}
                       title="Hapus Catatan"
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-stone-500 hover:text-red-400 transition-opacity cursor-pointer"
+                      aria-label="Hapus Catatan"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1 rounded text-stone-500 hover:text-red-400 transition-opacity cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

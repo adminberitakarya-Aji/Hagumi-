@@ -248,6 +248,7 @@ export const BentoFoodModal: React.FC<BentoFoodModalProps> = ({
             }}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
             title="Ganti Suasana Waktu Meja (Siang / Malam)"
+aria-label="Ganti Suasana Waktu Meja (Siang / Malam)"
           >
             {isDayVisual ? (
               <>
@@ -279,6 +280,7 @@ export const BentoFoodModal: React.FC<BentoFoodModalProps> = ({
             onClick={handleDone}
             className="p-1.5 rounded-full hover:bg-stone-800/80 text-stone-300 hover:text-stone-100 transition-all cursor-pointer"
             title="Kembali ke Ruang Tatami"
+aria-label="Kembali ke Ruang Tatami"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>

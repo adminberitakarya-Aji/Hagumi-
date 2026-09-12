@@ -129,6 +129,16 @@ export const ShojiTransition: React.FC<ShojiTransitionProps> = ({
       id="shoji-transition-overlay"
       className="fixed inset-0 z-[100] overflow-hidden flex cursor-pointer"
       onClick={finishTransition}
+      onKeyDown={(e) => {
+        // A11y: overlay pintu shoji dapat dilewati via keyboard
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          finishTransition();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Lewati transisi — buka pintu shoji"
       title="Klik untuk membuka pintu shoji"
     >
       {/* Top Camber / Ranma Wooden Track Bar */}

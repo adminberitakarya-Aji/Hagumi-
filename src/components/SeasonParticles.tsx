@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useCallback } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SeasonType } from '../types/game';
 
 interface SeasonParticlesProps {
@@ -132,6 +132,22 @@ export const SeasonParticles: React.FC<SeasonParticlesProps> = ({ season, intens
   const timeRef = useRef(0);
   const intensityMultiplier = intensity === 'light' ? 0.5 : intensity === 'heavy' ? 1.6 : 1.0;
 
+  // A11y: hormati prefers-reduced-motion — canvas partikel musim TIDAK tercakup
+  // oleh guard CSS global (animasinya berjalan via requestAnimationFrame).
+  // Saat pengguna memilih mengurangi gerak, partikel digambar sebagai satu
+  // bingkai statis (tanpa loop RAF). Preferensi dilacak real-time via listener.
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    setPrefersReducedMotion(mq.matches);
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
+  }, []);
+
   const initParticles = useCallback((canvas: HTMLCanvasElement) => {
     const config = SEASON_CONFIG[season];
     const count = Math.floor(config.count * intensityMultiplier);
@@ -159,6 +175,36 @@ export const SeasonParticles: React.FC<SeasonParticlesProps> = ({ season, intens
 
     const config = SEASON_CONFIG[season];
     const particleCount = Math.floor(config.count * intensityMultiplier);
+
+    // ─── A11y: mode reduced-motion — bingkai statis tanpa RAF loop ──────────
+    if (prefersReducedMotion) {
+      const drawStaticFrame = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (config.ambientGlow) {
+          ctx.fillStyle = config.ambientGlow;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        particlesRef.current.forEach((p) => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, Math.min(1, p.opacity));
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          if (config.glowEffect) { ctx.shadowBlur = p.size * 1.5; ctx.shadowColor = config.colors[0]; }
+          ctx.font = p.size + 'px serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.emoji, 0, 0);
+          ctx.restore();
+        });
+      };
+      drawStaticFrame();
+      const resizeObsStatic = new ResizeObserver(() => {
+        updateSize();
+        drawStaticFrame();
+      });
+      if (canvas.parentElement) resizeObsStatic.observe(canvas.parentElement);
+      return () => resizeObsStatic.disconnect();
+    }
 
     const animate = () => {
       timeRef.current += 0.016;
@@ -215,10 +261,10 @@ export const SeasonParticles: React.FC<SeasonParticlesProps> = ({ season, intens
 
     animFrameRef.current = requestAnimationFrame(animate);
     return () => { cancelAnimationFrame(animFrameRef.current); resizeObs.disconnect(); };
-  }, [season, initParticles, intensityMultiplier]);
+  }, [season, initParticles, intensityMultiplier, prefersReducedMotion]);
 
   return (
-    <canvas ref={canvasRef} className={className} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }} />
+    <canvas ref={canvasRef} aria-hidden="true" className={className} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }} />
   );
 };
 

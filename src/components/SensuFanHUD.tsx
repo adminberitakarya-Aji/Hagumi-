@@ -34,6 +34,26 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
 }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
+  // UX: penjelasan satu kali untuk pemain yang baru pertama kali membuka
+  // Menu Sensu (radial fan) — mengurangi kebingungan dua mode navigasi.
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('hagumi_sensu_intro_seen') !== 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissIntro = () => {
+    soundEngine.playClick();
+    try {
+      localStorage.setItem('hagumi_sensu_intro_seen', 'true');
+    } catch {
+      /* penyimpanan gagal diabaikan — intro tetap ditutup untuk sesi ini */
+    }
+    setShowIntro(false);
+  };
+
   const handleTrigger = () => {
     if (isOpen) {
       soundEngine.playSensuClose();
@@ -84,7 +104,12 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
         {/* The Radial Fan Blades when opened */}
         <AnimatePresence>
           {isOpen && (
-            <div className="relative w-0 h-0 pointer-events-auto">
+            <div
+              id="sensu-fan-menu"
+              className="relative w-0 h-0 pointer-events-auto"
+              role="menu"
+              aria-label="Menu Kipas Sensu"
+            >
               {/* Fan Washi Paper Arc Background Webbing */}
               <motion.div
                 className="absolute left-1/2 bottom-4 -translate-x-1/2 origin-bottom pointer-events-none"
@@ -157,6 +182,7 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
                         onMouseLeave={() => setHoveredIdx(null)}
                         className={`group relative flex flex-col items-center justify-center p-1.5 xs:p-2 sm:p-2.5 rounded-2xl bg-gradient-to-b ${item.color} ${item.border} border-2 shadow-[0_8px_20px_rgba(0,0,0,0.7),inset_0_1px_2px_rgba(255,255,255,0.2)] transition-all transform active:scale-90 hover:scale-115 hover:-translate-y-1 cursor-pointer w-13 xs:w-14 sm:w-16 h-14 xs:h-15 sm:h-17`}
                         title={`${item.label} (${item.sublabel})`}
+                        aria-label={`${item.label} — ${item.sublabel}`}
                       >
                         {/* Bamboo rib connector line back to pivot */}
                         <div
@@ -220,7 +246,29 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
 
         {/* The Sensu Pivot / Kaname Handle Button: Only rendered when NOT in Dock Mode */}
         {!isDockMode && (
-          <div className="relative pointer-events-auto flex items-center gap-1.5 sm:gap-2">
+          <div className="relative pointer-events-auto flex flex-col items-center gap-2">
+            {/* UX: caption penjelasan — tampil hanya saat pertama kali kipas terbuka */}
+            {isOpen && showIntro && (
+              <div
+                role="status"
+                className="flex items-center gap-2 max-w-[340px] px-3 py-1.5 rounded-xl bg-black/90 border border-amber-500/70 text-amber-200 text-[11px] shadow-lg animate-in fade-in"
+              >
+                <span aria-hidden="true">🪭</span>
+                <span className="leading-snug">
+                  Menu Sensu — semua ritual santuari ada di kipas ini. Tekan{' '}
+                  <strong className="text-amber-100">📱 Dock Mode</strong> untuk kembali ke bilah aksi klasik.
+                </span>
+                <button
+                  onClick={handleDismissIntro}
+                  aria-label="Tutup penjelasan Menu Sensu"
+                  title="Tutup penjelasan"
+                  className="p-1 rounded-lg bg-stone-900/80 border border-stone-700 hover:border-amber-400 text-stone-300 hover:text-white cursor-pointer flex-shrink-0"
+                >
+                  <span aria-hidden="true">✕</span>
+                </button>
+              </div>
+            )}
+            <div className="relative flex items-center gap-1.5 sm:gap-2">
             {/* Main Sensu Trigger Button */}
             <motion.button
               onClick={handleTrigger}
@@ -231,6 +279,9 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
                   : 'bg-gradient-to-r from-[#2e1a11] via-[#422518] to-[#26150e] border-amber-500 hover:border-amber-300 text-amber-200 hover:brightness-110'
               }`}
               title={isOpen ? 'Tutup Kipas Sensu' : 'Buka Menu Kipas Sensu (Sensu Radial Fan HUD)'}
+              aria-label={isOpen ? 'Tutup Kipas Sensu' : 'Buka Menu Kipas Sensu'}
+              aria-expanded={isOpen}
+              aria-controls="sensu-fan-menu"
             >
               {/* Pulsing Gold Halo when closed */}
               {!isOpen && (
@@ -275,6 +326,7 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
                 onToggleDockMode();
               }}
               title="Beralih ke Bilah Dock Klasik"
+              aria-label="Beralih ke Bilah Dock Klasik"
               className="px-2 py-1.5 xs:px-2.5 xs:py-2 sm:px-3 sm:py-2.5 rounded-full bg-[#1d120c]/90 border border-amber-600/70 hover:border-amber-400 text-amber-300 text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-md flex items-center gap-1 cursor-pointer backdrop-blur-sm"
             >
               <span>📱</span>
@@ -282,6 +334,7 @@ export const SensuFanHUD: React.FC<SensuFanHUDProps> = ({
                 Dock Mode
               </span>
             </button>
+            </div>
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@
  * Diekstrak dari TatamiRoom.tsx (langkah 4 refactor God component).
  */
 
+import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { PetData, SeasonType, DayPhase } from '../../types/game';
 import { getRequiredExp, getBondingLevelInfo } from '../../data/gameConfig';
@@ -41,8 +42,55 @@ export function TatamiHeader({
   odekakeRemainingSeconds, onOpenPrologue, handleCycleSeason,
   isDockMode, setIsDockMode, setIsSensuOpen,
 }: TatamiHeaderProps) {
+  // A11y: live region tersembunyi — mengumumkan perubahan status penting
+  // (sakit, tidur, kotoran, evolusi, keberangkatan Odekake) ke pembaca layar
+  // tanpa memerlukan fokus. Hanya diumumkan saat transisi (bukan tiap render).
+  const [liveMessage, setLiveMessage] = useState('');
+  const prevStatusRef = useRef({
+    isSick: pet.isSick,
+    isSleeping: pet.isSleeping,
+    poopCount: pet.poopCount,
+    stage: pet.stage,
+    isOdekake: Boolean(pet.activeOdekake),
+  });
+
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    const messages: string[] = [];
+    if (pet.isSick && !prev.isSick) {
+      messages.push(`${pet.name} sedang sakit! Berikan ramuan Yakusou dari Toko Tanuki.`);
+    } else if (!pet.isSick && prev.isSick) {
+      messages.push(`${pet.name} telah sembuh dari penyakitnya.`);
+    }
+    if (pet.isSleeping && !prev.isSleeping) {
+      messages.push(`${pet.name} mulai tidur.`);
+    } else if (!pet.isSleeping && prev.isSleeping) {
+      messages.push(`${pet.name} terbangun dan bugar.`);
+    }
+    if (pet.poopCount >= 3 && prev.poopCount < 3) {
+      messages.push(`Kotoran di tatami sudah ${pet.poopCount} gumpal. Saatnya menyapu.`);
+    }
+    if (pet.stage !== prev.stage) {
+      messages.push(`${pet.name} berevolusi ke tahap ${pet.stage}!`);
+    }
+    if (pet.activeOdekake && !prev.isOdekake) {
+      messages.push(`${pet.name} berangkat berkelana ke ${pet.activeOdekake.destinationName}.`);
+    }
+    prevStatusRef.current = {
+      isSick: pet.isSick,
+      isSleeping: pet.isSleeping,
+      poopCount: pet.poopCount,
+      stage: pet.stage,
+      isOdekake: Boolean(pet.activeOdekake),
+    };
+    if (messages.length > 0) setLiveMessage(messages.join(' '));
+  }, [pet]);
+
   return (
     <>
+      <div className="sr-only" role="status" aria-live="polite">
+        {liveMessage}
+      </div>
       {/* TOP HEADER: Pet Identity, Level, Coins & Time Indicator */}
       <header className="relative z-10 max-w-4xl mx-auto w-full bg-[#201813]/90 backdrop-blur-md rounded-2xl border border-amber-700/60 px-2 py-1.5 sm:px-4 sm:py-2 shadow-lg flex-shrink-0">
         <div className="flex items-center justify-between gap-1.5 sm:gap-2">
@@ -54,6 +102,7 @@ export function TatamiHeader({
                 setActiveModal('hanko');
               }}
               title="Lihat Buku Silsilah & Cap Hanko"
+              aria-label={`Lihat Buku Silsilah & Cap Hanko ${pet.name}`}
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-600 border border-rose-400 text-white font-['Shippori_Mincho',serif] font-bold text-sm sm:text-lg flex items-center justify-center shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
             >
               {pet.hankoSignature || '福'}
@@ -64,7 +113,7 @@ export function TatamiHeader({
                 <h1 className="text-xs sm:text-base font-bold font-['Shippori_Mincho',serif] text-amber-200 leading-tight truncate max-w-[80px] xs:max-w-[120px] sm:max-w-none">
                   {pet.name}
                 </h1>
-                <span className="px-1.5 py-0.2 rounded-full bg-amber-950/80 border border-amber-600/60 text-[8px] sm:text-[10px] text-amber-300 font-bold capitalize flex-shrink-0">
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-950/80 border border-amber-600/60 text-[10px] sm:text-[11px] text-amber-300 font-bold capitalize flex-shrink-0">
                   {pet.stage} • {pet.tailCount}E
                 </span>
               </div>
@@ -75,7 +124,7 @@ export function TatamiHeader({
                 const progressPct = Math.min(100, Math.round((pet.exp / requiredExp) * 100));
                 return (
                   <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5" title={`Progres EXP: ${pet.exp} / ${requiredExp} (${progressPct}%)`}>
-                    <span className="text-[8px] sm:text-[10px] text-stone-400 font-semibold flex-shrink-0">
+                    <span className="text-[10px] sm:text-[11px] text-stone-400 font-semibold flex-shrink-0">
                       Lv.{pet.level}
                     </span>
                     <div className="w-14 xs:w-20 sm:w-28 h-1.5 sm:h-2 bg-stone-800 rounded-full overflow-hidden border border-stone-700 flex-shrink-0">
@@ -84,7 +133,7 @@ export function TatamiHeader({
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
-                    <span className="text-[7px] sm:text-[9px] text-amber-400 font-mono hidden xs:inline flex-shrink-0">
+                    <span className="text-[10px] sm:text-[11px] text-amber-400 font-mono hidden xs:inline flex-shrink-0">
                       {pet.exp}/{requiredExp}
                     </span>
                   </div>
@@ -106,6 +155,7 @@ export function TatamiHeader({
                 });
               }}
               title={`Ikatan Batin (Kizuna Lv.${bondInfo.level}: ${bondInfo.currentMilestone.title}) • Pengasuh: ${pet.caretakerName || 'Pengasuh'}`}
+              aria-label={`Ikatan Batin Kizuna level ${bondInfo.level}: ${bondInfo.currentMilestone.title}. Buka Kuil Inari Okami.`}
               className="flex items-center gap-1 px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-pink-950/90 to-rose-950 border border-rose-600/70 text-rose-200 font-extrabold text-[10px] sm:text-xs shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0"
             >
               <span className="text-xs">💖</span>
@@ -123,6 +173,7 @@ export function TatamiHeader({
                 });
               }}
               title="Buka Toko Tanuki (08.00 - 22.00)"
+              aria-label={`Buka Toko Tanuki. Saldo ${pet.coins} Ryo.`}
               className="flex items-center gap-1 px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-950/80 border border-amber-600/70 text-amber-300 font-extrabold text-[10px] sm:text-xs shadow-sm hover:bg-amber-900/60 transition-all cursor-pointer flex-shrink-0"
             >
               <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
@@ -274,6 +325,7 @@ export function TatamiHeader({
                 setActiveModal('zenGarden');
               }}
               title="Engawa & Taman Zen Santuari (Kolam Ikan Koi & Pasir Karesansui)"
+              aria-label="Buka Engawa & Taman Zen Santuari (Kolam Ikan Koi & Pasir Karesansui)"
               className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-teal-950/90 to-emerald-950 border border-teal-500/80 text-teal-200 font-extrabold text-[10px] sm:text-xs shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0"
             >
               <span className="text-xs">🐟</span>
@@ -287,6 +339,7 @@ export function TatamiHeader({
                 handleCycleSeason();
               }}
               title={`Ganti Musim: ${season === 'spring' ? '🌸 Haru (Semi)' : season === 'summer' ? '🏮 Natsu (Panas)' : season === 'autumn' ? '🍁 Aki (Gugur)' : '❄️ Fuyu (Dingin)'} → Musim Selanjutnya`}
+              aria-label={`Ganti musim. Musim saat ini: ${season}. Tekan untuk musim selanjutnya.`}
               className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-[10px] sm:text-xs font-extrabold shadow-sm hover:brightness-110 transition-all cursor-pointer flex-shrink-0 ${
                 season === 'spring' ? 'bg-gradient-to-r from-pink-950/90 to-rose-950 border-pink-500/80 text-pink-200'
                 : season === 'summer' ? 'bg-gradient-to-r from-emerald-950/90 to-teal-950 border-green-500/80 text-green-200'
@@ -316,6 +369,7 @@ export function TatamiHeader({
                 }
               }}
               title={isDockMode ? 'Beralih ke Kipas Sensu Radial HUD' : 'Beralih ke Bilah Dock Klasik'}
+              aria-label={isDockMode ? 'Beralih ke Kipas Sensu Radial HUD' : 'Beralih ke Bilah Dock Klasik'}
               className="hidden sm:flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-[#381f14] to-[#24130c] border border-amber-500/80 text-amber-200 text-[11px] sm:text-xs font-extrabold shadow-sm hover:brightness-110 transition-all cursor-pointer"
             >
               <span>{isDockMode ? '🪭 Sensu' : '📱 Dock'}</span>
@@ -324,15 +378,25 @@ export function TatamiHeader({
         </div>
       </header>
       {/* CORE VITALS METERS: 1-Row Compact Grid */}
-      <section className="relative z-10 max-w-4xl mx-auto w-full my-1 sm:my-1.5 flex-shrink-0">
+      <section
+        aria-label="Meter vital Kitsune"
+        className="relative z-10 max-w-4xl mx-auto w-full my-1 sm:my-1.5 flex-shrink-0"
+      >
         <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
           {/* 1. Kenyang (Hunger) */}
-          <div className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0">
-            <div className="flex items-center justify-between text-[8px] xs:text-[9px] sm:text-[11px] font-bold text-stone-300">
+          <div
+            role="meter"
+            aria-label="Kenyang"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pet.stats.hunger)}
+            className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0"
+          >
+            <div className="flex items-center justify-between text-[10px] xs:text-[10px] sm:text-[11px] font-bold text-stone-300">
               <span className="flex items-center gap-0.5 truncate">
                 <span>🍙</span> <span className="hidden sm:inline">Kenyang</span>
               </span>
-              <span className={`font-mono text-[7px] xs:text-[8px] sm:text-[10px] ${pet.stats.hunger < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
+              <span className={`font-mono text-[10px] sm:text-[11px] ${pet.stats.hunger < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
                 {Math.round(pet.stats.hunger)}%
               </span>
             </div>
@@ -351,12 +415,19 @@ export function TatamiHeader({
           </div>
 
           {/* 2. Energi */}
-          <div className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0">
-            <div className="flex items-center justify-between text-[8px] xs:text-[9px] sm:text-[11px] font-bold text-stone-300">
+          <div
+            role="meter"
+            aria-label="Energi"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pet.stats.energy)}
+            className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0"
+          >
+            <div className="flex items-center justify-between text-[10px] xs:text-[10px] sm:text-[11px] font-bold text-stone-300">
               <span className="flex items-center gap-0.5 truncate">
                 <span>⚡</span> <span className="hidden sm:inline">Energi</span>
               </span>
-              <span className={`font-mono text-[7px] xs:text-[8px] sm:text-[10px] ${pet.stats.energy < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
+              <span className={`font-mono text-[10px] sm:text-[11px] ${pet.stats.energy < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
                 {Math.round(pet.stats.energy)}%
               </span>
             </div>
@@ -375,12 +446,19 @@ export function TatamiHeader({
           </div>
 
           {/* 3. Kebersihan */}
-          <div className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0">
-            <div className="flex items-center justify-between text-[8px] xs:text-[9px] sm:text-[11px] font-bold text-stone-300">
+          <div
+            role="meter"
+            aria-label="Kebersihan"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pet.stats.cleanliness)}
+            className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0"
+          >
+            <div className="flex items-center justify-between text-[10px] xs:text-[10px] sm:text-[11px] font-bold text-stone-300">
               <span className="flex items-center gap-0.5 truncate">
                 <span>🛁</span> <span className="hidden sm:inline">Bersih</span>
               </span>
-              <span className={`font-mono text-[7px] xs:text-[8px] sm:text-[10px] ${pet.stats.cleanliness < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
+              <span className={`font-mono text-[10px] sm:text-[11px] ${pet.stats.cleanliness < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
                 {Math.round(pet.stats.cleanliness)}%
               </span>
             </div>
@@ -399,12 +477,19 @@ export function TatamiHeader({
           </div>
 
           {/* 4. Kebahagiaan */}
-          <div className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0">
-            <div className="flex items-center justify-between text-[8px] xs:text-[9px] sm:text-[11px] font-bold text-stone-300">
+          <div
+            role="meter"
+            aria-label="Kebahagiaan"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pet.stats.happiness)}
+            className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0"
+          >
+            <div className="flex items-center justify-between text-[10px] xs:text-[10px] sm:text-[11px] font-bold text-stone-300">
               <span className="flex items-center gap-0.5 truncate">
                 <span>💖</span> <span className="hidden sm:inline">Bahagia</span>
               </span>
-              <span className={`font-mono text-[7px] xs:text-[8px] sm:text-[10px] ${pet.stats.happiness < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
+              <span className={`font-mono text-[10px] sm:text-[11px] ${pet.stats.happiness < 30 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
                 {Math.round(pet.stats.happiness)}%
               </span>
             </div>
@@ -423,12 +508,19 @@ export function TatamiHeader({
           </div>
 
           {/* 5. Kesehatan */}
-          <div className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0">
-            <div className="flex items-center justify-between text-[8px] xs:text-[9px] sm:text-[11px] font-bold text-stone-300">
+          <div
+            role="meter"
+            aria-label={`Kesehatan${pet.isSick ? ' (sedang sakit)' : ''}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pet.stats.health)}
+            className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0"
+          >
+            <div className="flex items-center justify-between text-[10px] xs:text-[10px] sm:text-[11px] font-bold text-stone-300">
               <span className="flex items-center gap-0.5 truncate">
                 <span>🌿</span> <span className="hidden sm:inline">Sehat</span>
               </span>
-              <span className={`font-mono text-[7px] xs:text-[8px] sm:text-[10px] ${pet.isSick || pet.stats.health < 40 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
+              <span className={`font-mono text-[10px] sm:text-[11px] ${pet.isSick || pet.stats.health < 40 ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'}`}>
                 {pet.isSick ? 'Sakit' : `${Math.round(pet.stats.health)}%`}
               </span>
             </div>
@@ -447,12 +539,19 @@ export function TatamiHeader({
           </div>
 
           {/* 6. Skor Kasih (Care Score) */}
-          <div className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0">
-            <div className="flex items-center justify-between text-[8px] xs:text-[9px] sm:text-[11px] font-bold text-amber-300">
+          <div
+            role="meter"
+            aria-label="Skor Kasih Sayang"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pet.careScore)}
+            className="p-1 sm:p-1.5 rounded-xl bg-[#1c1511]/90 border border-stone-800/80 flex flex-col justify-between min-w-0"
+          >
+            <div className="flex items-center justify-between text-[10px] xs:text-[10px] sm:text-[11px] font-bold text-amber-300">
               <span className="flex items-center gap-0.5 truncate">
                 <span>🏮</span> <span className="hidden sm:inline">Kasih</span>
               </span>
-              <span className="text-amber-400 font-bold font-mono text-[7px] xs:text-[8px] sm:text-[10px]">
+              <span className="text-amber-400 font-bold font-mono text-[10px] sm:text-[11px]">
                 {Math.round(pet.careScore)}
               </span>
             </div>

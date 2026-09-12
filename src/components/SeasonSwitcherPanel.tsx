@@ -100,6 +100,16 @@ export const SeasonSwitcherPanel: React.FC<SeasonSwitcherPanelProps> = ({
         overflow: 'hidden',
       }}
       onClick={onCycleSeason}
+      onKeyDown={(e) => {
+        // A11y: panel jimat musim dapat diaktifkan via keyboard
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onCycleSeason();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={'Berganti musim ke ' + nextMeta.nameJp}
       title={'Klik untuk berganti musim → ' + nextMeta.nameJp}
     >
       {/* Kanji watermark */}

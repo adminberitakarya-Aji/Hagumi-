@@ -416,6 +416,7 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
               }}
               className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-rose-900/80 hover:bg-rose-800 border border-rose-600/80 flex items-center justify-center text-2xl shadow-inner cursor-pointer hover:scale-110 active:scale-95 transition-all"
               title="Tarik Tali Genta Suzu & Tepukan Doa (Kashiwade)"
+aria-label="Tarik Tali Genta Suzu & Tepukan Doa (Kashiwade)"
             >
               ⛩️
             </button>
@@ -446,6 +447,7 @@ export const ShrineModal: React.FC<ShrineModalProps> = ({
               }}
               className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
               title="Ganti Suasana Waktu Kuil (Siang / Malam)"
+aria-label="Ganti Suasana Waktu Kuil (Siang / Malam)"
             >
               {isDayVisual ? (
                 <>

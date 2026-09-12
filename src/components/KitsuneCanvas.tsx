@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PetData, IdleThought } from '../types/game';
 import { ELEMENTS_CONFIG } from '../data/gameConfig';
 import { pickIdleThought } from '../utils/idleThoughts';
@@ -57,6 +57,21 @@ export const KitsuneCanvas: React.FC<KitsuneCanvasProps> = ({
     actionStateRef.current = actionState;
     eggCrackCountRef.current = eggCrackCount;
   }, [pet, actionState, eggCrackCount]);
+
+  // A11y: snapshot bubble pikiran aktif untuk tombol overlay (lihat return JSX).
+  // Canvas murni tidak terjangkau keyboard/screen reader; bubble pikiran yang
+  // bisa memicu modal kebutuhan diekspos sebagai tombol. State hanya berubah
+  // saat transisi muncul/hilang (bukan tiap frame) sehingga tidak re-render
+  // loop animasi. Posisi disimpan sebagai persentase (canvas 360x320 tetap).
+  const [thoughtOverlay, setThoughtOverlay] = useState<{
+    xPct: number;
+    yPct: number;
+    wPct: number;
+    hPct: number;
+    text: string;
+    trigger: string;
+  } | null>(null);
+  const hadThoughtOverlayRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -254,6 +269,26 @@ export const KitsuneCanvas: React.FC<KitsuneCanvasProps> = ({
         }
       }
 
+      // ─── A11Y: sinkronkan bubble pikiran ke tombol overlay ───────────────
+      // Update hanya pada transisi muncul/hilang — tidak memicu setState tiap frame.
+      const hasBubbleNow = !!(p.thoughtBox && p.currentThought && p.thoughtAlpha > 0.3);
+      if (hasBubbleNow !== hadThoughtOverlayRef.current) {
+        hadThoughtOverlayRef.current = hasBubbleNow;
+        if (hasBubbleNow && p.thoughtBox && p.currentThought) {
+          const tb = p.thoughtBox;
+          setThoughtOverlay({
+            xPct: (tb.x / canvas.width) * 100,
+            yPct: (tb.y / canvas.height) * 100,
+            wPct: (tb.w / canvas.width) * 100,
+            hPct: (tb.h / canvas.height) * 100,
+            text: p.currentThought.text,
+            trigger: p.currentThought.trigger,
+          });
+        } else {
+          setThoughtOverlay(null);
+        }
+      }
+
       animationFrameId = requestAnimationFrame(render);
     };
 
@@ -311,17 +346,61 @@ export const KitsuneCanvas: React.FC<KitsuneCanvasProps> = ({
     onPetClick?.();
   };
 
+  // A11y: jalur akses bubble pikiran via keyboard (Tab → Enter/Spasi pada
+  // tombol overlay) — perilaku identik dengan tap bubble di canvas.
+  const handleThoughtOverlayActivate = () => {
+    const p = posRef.current;
+    const thought = p.currentThought;
+    p.currentThought = null;
+    p.thoughtDuration = 0;
+    p.thoughtAlpha = 0;
+    p.thoughtBox = null;
+    p.thoughtTimer = Math.floor(240 + Math.random() * 240);
+    p.hopTimer = 10; // Little happy hop
+    if (thought) onThoughtClick?.(thought.trigger, thought.text);
+  };
+
+  // A11y: deskripsi dinamis canvas untuk pembaca layar. Ditarik dari props
+  // (bukan RAF loop) agar label selalu sinkron dengan state pet terbaru.
+  const canvasAriaLabel =
+    pet.stage === 'egg'
+      ? `Telur Hoju roh ${pet.name} di atas tatami. Klik tatami untuk berinteraksi.`
+      : `${pet.name}, roh kitsune${pet.isSleeping ? ' yang sedang tidur lelap' : ' yang sedang bermain di tatami'}. Kenyang ${Math.round(pet.stats.hunger)} persen, energi ${Math.round(pet.stats.energy)} persen, kebersihan ${Math.round(pet.stats.cleanliness)} persen, kebahagiaan ${Math.round(pet.stats.happiness)} persen. Klik tatami untuk memanggil kitsune.`;
+
   return (
     <div className="relative flex items-center justify-center cursor-pointer select-none max-h-full">
+      {/* Live region: mengumumkan isi bubble pikiran terbaru ke pembaca layar */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {thoughtOverlay ? thoughtOverlay.text : ''}
+      </span>
       <canvas
         ref={canvasRef}
         width={360}
         height={320}
         onClick={handleCanvasClick}
+        role="img"
+        aria-label={canvasAriaLabel}
         className="max-h-[36dvh] sm:max-h-[44dvh] w-auto max-w-[320px] sm:max-w-[380px] aspect-[360/320] object-contain transition-transform active:scale-95 cursor-pointer"
         style={{ imageRendering: 'auto' }}
         title="Klik tatami untuk memanggil atau mengelus Kitsune-mu!"
       />
+      {/* A11y: tombol overlay transparan di atas bubble pikiran saat muncul —
+          dapat dijangkau Tab/Enter/Spasi & pembaca layar; outline fokus tetap
+          terlihat (background transparan agar bubble gambar canvas terlihat). */}
+      {thoughtOverlay && (
+        <button
+          type="button"
+          onClick={handleThoughtOverlayActivate}
+          aria-label={`${thoughtOverlay.text} — aktifkan untuk merespons kebutuhan ini`}
+          className="absolute rounded-xl outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 cursor-pointer"
+          style={{
+            left: `${thoughtOverlay.xPct}%`,
+            top: `${thoughtOverlay.yPct}%`,
+            width: `${thoughtOverlay.wPct}%`,
+            height: `${thoughtOverlay.hPct}%`,
+          }}
+        />
+      )}
     </div>
   );
 };

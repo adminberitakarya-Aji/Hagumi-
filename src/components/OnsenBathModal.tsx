@@ -230,6 +230,7 @@ export const OnsenBathModal: React.FC<OnsenBathModalProps> = ({
             }}
             className="absolute rounded-full bg-gradient-to-tr from-cyan-300/40 via-white/80 to-pink-300/40 border border-white/90 backdrop-blur-[1px] shadow-sm animate-bounce cursor-pointer hover:scale-130 active:scale-90 transition-transform"
             title="Klik untuk memecahkan gelembung!"
+            aria-label="Gelembung sabun — ketuk untuk memecahkannya"
           />
         ))}
       </div>
@@ -268,6 +269,7 @@ export const OnsenBathModal: React.FC<OnsenBathModalProps> = ({
             }}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-cyan-500/50 text-[11px] font-bold text-cyan-200 transition-all cursor-pointer shadow-sm"
             title="Ganti Suasana Waktu Pemandian (Siang / Malam)"
+aria-label="Ganti Suasana Waktu Pemandian (Siang / Malam)"
           >
             {isDayVisual ? (
               <>
@@ -290,6 +292,7 @@ export const OnsenBathModal: React.FC<OnsenBathModalProps> = ({
             onClick={onClose}
             className="p-1.5 rounded-full hover:bg-stone-800/80 text-stone-300 hover:text-stone-100 transition-all cursor-pointer"
             title="Kembali ke Ruang Tatami"
+aria-label="Kembali ke Ruang Tatami"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -317,10 +320,10 @@ export const OnsenBathModal: React.FC<OnsenBathModalProps> = ({
             </div>
 
             {/* Floating Yuzu Fruit in bath water beside Kitsune */}
-            <div className="absolute -bottom-1 -left-10 text-2xl animate-bounce pointer-events-none drop-shadow" title="Buah Yuzu Hangat">
+            <div className="absolute -bottom-1 -left-10 text-2xl animate-bounce pointer-events-none drop-shadow" aria-hidden="true" title="Buah Yuzu Hangat">
               🍋
             </div>
-            <div className="absolute 0 -right-12 text-xl animate-bounce delay-300 pointer-events-none drop-shadow" title="Buah Yuzu Hangat">
+            <div className="absolute 0 -right-12 text-xl animate-bounce delay-300 pointer-events-none drop-shadow" aria-hidden="true" title="Buah Yuzu Hangat">
               🍋
             </div>
 

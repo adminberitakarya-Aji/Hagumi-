@@ -115,6 +115,7 @@ export const TanukiShopModal: React.FC<TanukiShopModalProps> = ({
                 }}
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-600/90 to-amber-950 border border-amber-400/80 flex items-center justify-center text-xl sm:text-2xl shadow-lg flex-shrink-0 cursor-pointer hover:scale-110 active:scale-90 transition-transform"
                 title="Tepuk gendang perut Tanuki (Poko-pon!)"
+aria-label="Tepuk gendang perut Tanuki (Poko-pon!)"
               >
                 🏪
               </button>
@@ -147,6 +148,7 @@ export const TanukiShopModal: React.FC<TanukiShopModalProps> = ({
                 }}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
                 title="Ganti Suasana Waktu Toko (Siang / Malam)"
+aria-label="Ganti Suasana Waktu Toko (Siang / Malam)"
               >
                 {isDayVisual ? (
                   <>
@@ -171,6 +173,7 @@ export const TanukiShopModal: React.FC<TanukiShopModalProps> = ({
                 }}
                 className="p-1.5 sm:p-2 rounded-full hover:bg-stone-800/80 text-stone-300 hover:text-stone-100 transition-all cursor-pointer"
                 title="Tutup Toko"
+aria-label="Tutup Toko"
               >
                 <X className="w-5 h-5" />
               </button>

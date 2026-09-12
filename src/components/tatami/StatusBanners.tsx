@@ -44,7 +44,10 @@ export function StatusBanners({
       {/* SICK BANNER ALERT */}
       {pet.isSick && (
         <div className="relative z-20 max-w-md mx-auto my-0.5 flex-shrink-0 animate-in fade-in">
-          <div className="px-3 py-1 rounded-xl bg-rose-950/90 border border-rose-500 text-rose-200 text-[10px] sm:text-xs flex items-center justify-between gap-2 shadow-lg">
+          <div
+            role="alert"
+            className="px-3 py-1 rounded-xl bg-rose-950/90 border border-rose-500 text-rose-200 text-[10px] sm:text-xs flex items-center justify-between gap-2 shadow-lg"
+          >
             <div className="flex items-center gap-1.5 truncate">
               <span>🤒</span>
               <span className="truncate">{pet.name} demam roh! Butuh ramuan Yakusou.</span>
@@ -65,7 +68,10 @@ export function StatusBanners({
       {/* RESTING SLEEP STATUS BANNER (15 MENIT NYENYAK) */}
       {pet.isSleeping && (
         <div className="relative z-20 max-w-2xl mx-auto w-full px-2 sm:px-3 mb-1 animate-in fade-in slide-in-from-top-1">
-          <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-purple-950/85 backdrop-blur-md border border-purple-500/70 text-purple-200 text-xs shadow-lg">
+          <div
+            role="status"
+            className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-purple-950/85 backdrop-blur-md border border-purple-500/70 text-purple-200 text-xs shadow-lg"
+          >
             <div className="flex items-center gap-2">
               <span className="text-sm animate-pulse">💤</span>
               <span className="text-[11px] sm:text-xs">
@@ -80,6 +86,7 @@ export function StatusBanners({
                 onClick={() => setActiveModal('shop')}
                 className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 text-amber-200 text-[10px] font-bold border border-amber-600/60 cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1"
                 title="Toko Tanuki tetap buka dan bisa belanja kapan saja"
+                aria-label="Buka Toko Tanuki"
               >
                 <span>🏪</span>
                 <span className="hidden xs:inline">Toko</span>
@@ -88,6 +95,7 @@ export function StatusBanners({
                 onClick={handleOpenBedroomScene}
                 className="px-2 py-0.5 rounded-lg bg-purple-800/80 hover:bg-purple-700 text-purple-100 text-[10px] font-bold border border-purple-400/60 cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1"
                 title="Lihat Kitsune di kamar tidur futon"
+                aria-label="Lihat Kitsune di kamar tidur futon"
               >
                 <span>🛏️</span>
                 <span className="hidden xs:inline">Futon</span>
@@ -100,7 +108,10 @@ export function StatusBanners({
       {/* ODEKAKE TRAVEL STATUS BANNER */}
       {pet.activeOdekake && (
         <div className="relative z-20 max-w-2xl mx-auto w-full px-2 sm:px-3 mb-1 animate-in fade-in slide-in-from-top-1">
-          <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 via-[#26160e]/95 to-[#1c100a]/90 backdrop-blur-md border border-amber-500/70 text-amber-200 text-xs shadow-lg">
+          <div
+            role="status"
+            className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 via-[#26160e]/95 to-[#1c100a]/90 backdrop-blur-md border border-amber-500/70 text-amber-200 text-xs shadow-lg"
+          >
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-sm animate-bounce">🎒</span>
               <span className="text-[11px] sm:text-xs truncate">

@@ -223,6 +223,7 @@ export const ToriiPrologueGateway: React.FC<ToriiPrologueGatewayProps> = ({
             <button
               onClick={handleRingBell}
               title="Bunyikan Lonceng Suci Kuil (Suzu)"
+aria-label="Bunyikan Lonceng Suci Kuil (Suzu)"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-bold text-xs transition-all cursor-pointer ${
                 isBellRinging
                   ? 'bg-amber-500 text-stone-950 border-amber-300 scale-105 shadow-[0_0_15px_rgba(251,191,36,0.8)]'
@@ -240,6 +241,7 @@ export const ToriiPrologueGateway: React.FC<ToriiPrologueGatewayProps> = ({
                 setIsAudioPlaying(active);
               }}
               title={isAudioPlaying ? 'Jeda Musik Zen Kuil' : 'Putar Musik Zen Kuil'}
+aria-label={isAudioPlaying ? 'Jeda Musik Zen Kuil' : 'Putar Musik Zen Kuil'}
               className="p-2 rounded-xl bg-stone-900/80 border border-amber-700/60 text-amber-300 hover:text-amber-100 hover:border-amber-400 transition-all cursor-pointer"
             >
               {isAudioPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -254,6 +256,7 @@ export const ToriiPrologueGateway: React.FC<ToriiPrologueGatewayProps> = ({
                 }}
                 className="p-2 rounded-xl bg-stone-900/80 border border-stone-700 hover:border-amber-400 text-stone-300 hover:text-white transition-all cursor-pointer"
                 title="Tutup Prologue"
+aria-label="Tutup Prologue"
               >
                 <X className="w-4 h-4" />
               </button>

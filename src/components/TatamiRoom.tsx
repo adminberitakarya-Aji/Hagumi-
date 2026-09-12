@@ -735,6 +735,16 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                 e.stopPropagation();
                 handleOpenBedroomScene();
               }}
+              onKeyDown={(e) => {
+                // A11y: kartu tidur dapat diaktifkan via keyboard
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleOpenBedroomScene();
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Menengok ${pet.name} yang sedang tidur di kamar peraduan futon`}
               className="relative flex flex-col items-center justify-center p-3.5 sm:p-5 rounded-3xl bg-black/40 border border-purple-500/40 backdrop-blur-md max-w-xs text-center cursor-pointer hover:border-purple-400/80 hover:bg-black/60 transition-all group shadow-2xl animate-in fade-in"
               title="Klik untuk menengok Kitsune di kamar peraduan futon"
             >
@@ -770,6 +780,17 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                 soundEngine.playClick();
                 setActiveModal('odekake');
               }}
+              onKeyDown={(e) => {
+                // A11y: kartu surat Odekake dapat diaktifkan via keyboard
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  soundEngine.playClick();
+                  setActiveModal('odekake');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Lihat kabar perjalanan ${pet.name} yang sedang berkelana ke ${pet.activeOdekake.destinationName}`}
               className="relative flex flex-col items-center justify-center p-4 sm:p-6 rounded-3xl bg-gradient-to-b from-[#2a1b12]/90 to-[#180f0a]/95 border-2 border-amber-500/70 backdrop-blur-md max-w-sm text-center cursor-pointer hover:border-amber-400 hover:bg-black/70 transition-all group shadow-2xl animate-in fade-in"
               title="Klik untuk melihat kabar perjalanan Kitsune"
             >
@@ -814,6 +835,17 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
                 onPetClick={handlePetClick}
                 onThoughtClick={handleThoughtClick}
               />
+
+              {/* A11y: pad kasih sayang keyboard — jalur alternatif non-pointer
+                  untuk mengelus kitsune (interaksi canvas tidak bisa via keyboard). */}
+              <button
+                onClick={handlePetClick}
+                aria-label={`Elus ${pet.name} (kasih sayang)`}
+                className="mt-1 flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-900/90 border border-rose-500 text-rose-200 text-[10px] sm:text-xs font-bold shadow-lg hover:bg-rose-800 transition-all cursor-pointer flex-shrink-0"
+              >
+                <Heart className="w-3 h-3 text-rose-300" />
+                <span>Elus {pet.name}</span>
+              </button>
 
               {/* Poop cleaning quick alert if dirty */}
               {pet.poopCount > 0 && (

@@ -56,6 +56,7 @@ export function TatamiDock({
                   : 'bg-gradient-to-b from-[#3a281e] to-[#251811] hover:from-[#483327] hover:to-[#2e1f16] border border-amber-600/60 text-stone-100 active:scale-95 cursor-pointer'
               }`}
               title={pet.isSleeping ? 'Kitsune sedang tidur lelap (Zzz...)' : 'Makan Bento'}
+              aria-label={pet.isSleeping ? 'Makan — Kitsune sedang tidur lelap' : 'Makan Bento'}
             >
               <span className={`text-lg sm:text-2xl transition-transform ${!pet.isSleeping ? 'group-hover:scale-110' : ''}`}>
                 🍙
@@ -80,6 +81,7 @@ export function TatamiDock({
                   : 'bg-gradient-to-b from-[#1e2e38] to-[#121c22] hover:from-[#2a3f4c] hover:to-[#17242c] border border-cyan-600/70 text-stone-100 active:scale-95 cursor-pointer'
               }`}
               title={pet.isSleeping ? 'Kitsune sedang tidur lelap (Zzz...)' : 'Pemandian Onsen'}
+              aria-label={pet.isSleeping ? 'Mandi — Kitsune sedang tidur lelap' : 'Pemandian Onsen'}
             >
               <span className={`text-lg sm:text-2xl transition-transform ${!pet.isSleeping ? 'group-hover:scale-110' : ''}`}>
                 🛁
@@ -98,6 +100,7 @@ export function TatamiDock({
                   : 'bg-gradient-to-b from-[#2e1c3a] to-[#1c0f24] hover:from-[#3d254e] hover:to-[#24132f] border-purple-600/70 text-stone-100'
               }`}
               title={pet.isSleeping ? 'Lihat Kamar Tidur & Sisa Waktu' : 'Tidurkan Kitsune (15 Menit)'}
+              aria-label={pet.isSleeping ? 'Lihat Kamar Tidur & Sisa Waktu Tidur' : 'Tidurkan Kitsune selama 15 Menit'}
             >
               <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform">
                 {pet.isSleeping ? '💤' : '🛏️'}
@@ -127,6 +130,7 @@ export function TatamiDock({
                   : 'bg-gradient-to-b from-[#3d2319] to-[#26130d] hover:from-[#4c2d20] hover:to-[#311911] border border-amber-500/70 text-stone-100 active:scale-95 cursor-pointer'
               }`}
               title={pet.isSleeping ? 'Kitsune sedang tidur lelap (Zzz...)' : 'Lemari Busana'}
+              aria-label={pet.isSleeping ? 'Busana — Kitsune sedang tidur lelap' : 'Lemari Busana Kitsune Tansu'}
             >
               <span className={`text-lg sm:text-2xl transition-transform ${!pet.isSleeping ? 'group-hover:scale-110' : ''}`}>
                 👘
@@ -156,6 +160,7 @@ export function TatamiDock({
                   : 'bg-gradient-to-b from-[#4a1b18] to-[#2b0e0c] hover:from-[#58211d] hover:to-[#34110f] border border-rose-600/70 text-stone-100 active:scale-95 cursor-pointer'
               }`}
               title={pet.isSleeping ? 'Kitsune sedang tidur lelap (Zzz...)' : 'Kuil Inari'}
+              aria-label={pet.isSleeping ? 'Kuil Inari — Kitsune sedang tidur lelap' : 'Buka Kuil Inari (Omikuji, Ema & AI Chat)'}
             >
               <span className={`text-lg sm:text-2xl transition-transform ${!pet.isSleeping ? 'group-hover:scale-110' : ''}`}>
                 ⛩️
@@ -185,6 +190,7 @@ export function TatamiDock({
                   : 'bg-gradient-to-b from-[#3a281e] to-[#251811] hover:from-[#483327] hover:to-[#2e1f16] border border-amber-600/60 text-stone-100 active:scale-95 cursor-pointer'
               }`}
               title={pet.isSleeping ? 'Kitsune sedang tidur lelap (Zzz...)' : 'Festival Matsuri'}
+              aria-label={pet.isSleeping ? 'Festival — Kitsune sedang tidur lelap' : 'Buka Festival Matsuri (mini-game)'}
             >
               <span className={`text-lg sm:text-2xl transition-transform ${!pet.isSleeping ? 'group-hover:scale-110' : ''}`}>
                 🎏
@@ -206,6 +212,7 @@ export function TatamiDock({
               }}
               className="py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl bg-gradient-to-b from-[#3a281e] to-[#251811] hover:from-[#483327] hover:to-[#2e1f16] border border-amber-500 text-stone-100 flex flex-col items-center justify-center transition-all active:scale-95 shadow-md cursor-pointer group ring-1 ring-amber-500/50"
               title="Toko Serba Ada Tanuki (Buka Selalu)"
+              aria-label="Buka Toko Serba Ada Tanuki (buka selalu)"
             >
               <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform">
                 🏪
@@ -223,6 +230,7 @@ export function TatamiDock({
               }}
               className="py-2 px-1 sm:py-2.5 sm:px-2 min-h-[44px] rounded-xl bg-gradient-to-b from-[#3a281e] to-[#251811] hover:from-[#483327] hover:to-[#2e1f16] border border-amber-500/80 text-stone-100 flex flex-col items-center justify-center transition-all active:scale-95 shadow-md cursor-pointer group"
               title="Menu Fitur Santuari"
+              aria-label="Buka Menu Fitur Santuari"
             >
               <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform">
                 🏮

@@ -42,3 +42,31 @@ html, body, #root {
   }
 }
 
+/* ============================================================
+   A11Y / UX: Mode "Teks Besar" (toggle di Menu Fitur Santuari).
+   Menaikkan seluruh token teks mikro (7–12px arbitrary) sebesar
+   +2px di aplikasi. Aturan sengaja ditulis di luar @layer Tailwind
+   agar selalu mengalahkan utility layer (cascade layer priority),
+   termasuk varian responsifnya (xs:/sm:).
+   ============================================================ */
+.hagumi-text-large .text-\[7px\],
+.hagumi-text-large .text-\[8px\] {
+  font-size: 10px;
+}
+
+.hagumi-text-large .text-\[9px\] {
+  font-size: 11px;
+}
+
+.hagumi-text-large .text-\[10px\] {
+  font-size: 12px;
+}
+
+.hagumi-text-large .text-\[11px\] {
+  font-size: 13px;
+}
+
+.hagumi-text-large .text-\[12px\] {
+  font-size: 14px;
+}
+

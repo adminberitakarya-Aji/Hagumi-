@@ -4,6 +4,7 @@ import { TatamiRoom } from './components/TatamiRoom';
 import { EvolutionTarget, determineNextEvolution } from './data/gameConfig';
 import { PetData } from './types/game';
 import { DialogA11yWrapper } from './hooks/useDialogA11y';
+import { applyStoredTextScale } from './utils/textScale';
 
 // CODE SPLITTING (Revisi 4 bug #4): layar berat yang kondisional di-lazy-load
 // agar tidak ikut dalam bundle utama (pemain lama tidak pernah memuat Prolog/
@@ -47,6 +48,11 @@ export default function App() {
   } = useGameLoop();
 
   const [activeEvolution, setActiveEvolution] = useState<EvolutionTarget | null>(null);
+
+  // A11y: terapkan preferensi "Teks Besar" tersimpan saat aplikasi boot.
+  useEffect(() => {
+    applyStoredTextScale();
+  }, []);
 
   // Buffer hadiah Prolog yang diklaim SEBELUM pet ada (pemain baru belum menetas).
   // Tanpa buffer ini, setPet((prev) => prev) adalah no-op saat pet masih null,

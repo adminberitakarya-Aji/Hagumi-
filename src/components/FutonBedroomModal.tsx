@@ -191,6 +191,7 @@ export const FutonBedroomModal: React.FC<FutonBedroomModalProps> = ({
             }}
             className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-purple-500/50 text-[11px] font-bold text-purple-200 transition-all cursor-pointer shadow-sm"
             title="Ganti Suasana Waktu Kamar Tidur (Siang / Malam)"
+aria-label="Ganti Suasana Waktu Kamar Tidur (Siang / Malam)"
           >
             {isDayVisual ? (
               <>

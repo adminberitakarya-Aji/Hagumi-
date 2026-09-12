@@ -76,6 +76,7 @@ export const MatsuriGamesModal: React.FC<MatsuriGamesModalProps> = ({
               }}
               className="w-10 h-10 rounded-2xl bg-amber-900/60 hover:bg-amber-800 border border-amber-600/60 flex items-center justify-center text-xl shadow-inner cursor-pointer hover:scale-110 active:scale-95 transition-all"
               title="Tabuh Gendang Festival (Taiko Matsuri Roll)"
+aria-label="Tabuh Gendang Festival (Taiko Matsuri Roll)"
             >
               🥁
             </button>
@@ -101,6 +102,7 @@ export const MatsuriGamesModal: React.FC<MatsuriGamesModalProps> = ({
               }}
               className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-500/50 text-[11px] font-bold text-amber-200 transition-all cursor-pointer shadow-sm"
               title="Ganti Suasana Waktu Festival (Siang / Malam)"
+aria-label="Ganti Suasana Waktu Festival (Siang / Malam)"
             >
               {isDayVisual ? (
                 <>
