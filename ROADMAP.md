@@ -12,7 +12,7 @@
 | **M1.5** | **Onboarding & Altar Telur** | ✅ Selesai | Gerbang Torii, Altar Telur Suci, Pemilihan Elemen Jiwa, Layar Penamaan & Cap Hanko, Animasi Menetas (Hatching) |
 | **M2** | **Full Game Loop & Festival** | ✅ Selesai | Mekanisme Kotoran (Poop/Unko), Penyakit & Obat Herbal (Yakusou), Mini-Game #1: *Kingyo-sukui*, Toko Tanuki & Koin Ryo |
 | **M3** | **Sistem Evolusi Bercabang** | ✅ Selesai | Formula *Care Score*, 5 Tahap Pertumbuhan (Telur → Bayi/Kitsunebi → Anak → Remaja → Dewasa/Mistik), Layar Upacara Evolusi |
-| **M4** | **Retensi & Aktivitas Ekstra** | ✅ Selesai | Kalkulasi Offline Progress (Simulasi saat pemain pergi) + Layar Ringkasan Kepulangan, Hadiah Kehadiran Harian, Mini-Game #2: *Wanage*, Mini-Game #3: *Kitsune Dash* |
+| **M4** | **Retensi & Aktivitas Ekstra** | ✅ Selesai | Kalkulasi Offline Progress (Simulasi saat pemain pergi) + Layar Ringkasan Kepulangan, Hadiah Kehadiran Harian *(koreksi doc-drift, Revisi 6/P4: klaim ✅ di milestone ini sebelumnya belum punya implementasi di kode — BARU terealisasi penuh 12 Sep 2026 sebagai 2 quest harian + streak 🔥, schema save v4; lihat `docs/02` §9)*, Mini-Game #2: *Wanage*, Mini-Game #3: *Kitsune Dash* |
 | **M5** | **Audio, SFX & Visual Atmosphere** | ✅ Selesai | Web Audio API Retro 8-bit & Shamisen/Koto Synth, Siklus Waktu 4 Fase (Pagi, Siang, Sore, Malam), Partikel Cuaca |
 | **M6** | **Companion Dialogue & AI Chat** | ✅ Selesai | Balon dialog kontekstual real-time, percakapan mendalam dengan Gemini API di Kuil Inari (Altar Doa Ema & Omikuji) |
 | **M7** | **Memorial & Pohon Silsilah** | ✅ Selesai | Catatan silsilah rubah, album kenangan, cap hanko resmi, siklus reinkarnasi |

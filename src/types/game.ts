@@ -115,6 +115,8 @@ export interface PetData {
   bondingTitle?: string;
   /** Cooldown meditasi Zen harian: tanggal lokal terakhir (YYYY-MM-DD) — 1× per hari kalender. */
   lastZenMeditationDate?: string;
+  /** P4 (Revisi 6): quest harian & streak retensi (lihat src/utils/dailyQuest.ts). */
+  dailyQuest?: DailyQuestState;
   activeOdekake?: OdekakeTrip;
   completedOdekakes?: number;
   unlockedPostcards?: string[];
@@ -122,6 +124,26 @@ export interface PetData {
 }
 
 export type WishCategory = 'health' | 'fortune' | 'bonding' | 'wisdom' | 'peace';
+
+/**
+ * P4 (Revisi 6): state quest harian & streak. Tersimpan di save (schema v4) —
+ * field opsional agar save lama tetap valid. Logika murni ada di
+ * src/utils/dailyQuest.ts.
+ */
+export interface DailyQuestState {
+  /** Tanggal lokal (YYYY-MM-DD) yang sedang aktif untuk quest ini. */
+  questDate: string;
+  /** Quest 1: memberi makan 1× hari ini. */
+  feedDone: boolean;
+  /** Quest 2: memainkan 1 mini-game festival hari ini. */
+  gameDone: boolean;
+  /** Jumlah hari berturut-turut menuntaskan minimal 1 quest. */
+  streakCount: number;
+  /** Tanggal lokal terakhir streak di-update (YYYY-MM-DD). */
+  lastStreakDate: string;
+  /** Nilai streak terakhir yang sudah diklaim bonusnya (kelipatan 7). */
+  lastBonusStreak: number;
+}
 
 export interface ShrineWish {
   id: string;

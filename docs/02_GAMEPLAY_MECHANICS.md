@@ -247,6 +247,43 @@ otomatis mengangkat kualitas pengasuhan keseluruhan, bukan hanya jalur evolusi Z
 
 ---
 
+## 📜 9. Quest Harian & Streak (*Daily Quest & Streak*) — P4 Revisi 6
+
+> Sumber kebenaran: `src/utils/dailyQuest.ts` (logika murni), `src/hooks/useDailyQuest.ts`
+> (integrasi state), `src/components/tatami/DailyQuestPanel.tsx` (HUD). State tersimpan di
+> save **schema v4** — field opsional `dailyQuest: DailyQuestState` (`src/types/game.ts`),
+> jadi save lama tetap valid tanpa migrasi data.
+
+### 9.1 Dua Quest Harian (auto-claim, non-blocking)
+
+| Quest | Pemicu (1× per hari) | Reward |
+| :--- | :--- | :--- |
+| 🍙 **Beri Makan** | `handleFeedItem` — memberi makan item apa pun | **+10 Ryo, +5 EXP** |
+| 🎏 **Mini-game Festival** | `handleGameReward` — sesi mini-game apa pun | **+15 Ryo, +10 EXP** |
+
+- Reward **auto-claim** saat aksi terjadi (tanpa tombol klaim — konsisten desain cozy).
+- **Tidak dihitung ganda** dalam hari yang sama (guard `questDate`).
+- Desain **non-blocking**: quest tidak pernah memblokir aksi lain; panel hanya memandu.
+- Kalender memakai tanggal **lokal** YYYY-MM-DD (`toLocaleDateString('sv-SE')` — pola yang sama
+  dengan cooldown meditasi Zen §8). Roll quest ke hari baru terjadi saat aksi pertama hari itu
+  atau saat save berikutnya; panel hanya menampilkan *view* roll tanpa persist.
+
+### 9.2 Streak 🔥 (*Retention Streak*)
+
+- **Definisi**: jumlah hari **berturut-turut** menuntaskan minimal 1 quest.
+- Hari sama → streak tidak berubah; hari berurutan (kemarin) → **+1**; bolong → kembali ke **1**.
+- **Tanpa hukuman lain** — hadiah tidak pernah dicabut (filosofi cozy non-punishing).
+- **Bonus**: streak kelipatan **7** → **+50 Ryo** (diberikan sekali per nilai streak, dilacak
+  `lastBonusStreak`, sehingga nilai streak 7, 14, 21, … masing-masing berhadiah tepat 1×).
+
+### 9.3 Nilai Konstanta
+
+`DAILY_FEED_REWARD = { coins: 10, exp: 5 }` · `DAILY_GAME_REWARD = { coins: 15, exp: 10 }` ·
+`STREAK_BONUS_COINS = 50` · `STREAK_BONUS_EVERY = 7`
+
+> Saat mengubah angka/aturan di `dailyQuest.ts`, perbarui bagian ini di commit yang sama.
+> Guard sinkronisasi ada di `src/utils/dailyQuest.test.ts` & `src/utils/petSaveSchema.test.ts`.
+
 ## 📎 Catatan Pemeliharaan Dokumen
 
 - Dokumen ini dibuat ulang pada 8 September 2026 sebagai koreksi atas temuan audit (lihat `audit.md`):

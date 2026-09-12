@@ -41,6 +41,8 @@ import { TatamiDock } from './tatami/TatamiDock';
 import { useFirstQuest } from '../hooks/useFirstQuest';
 import { FirstQuestBanner } from './tatami/FirstQuestBanner';
 import { InariConsiderationCard } from './tatami/InariConsiderationCard';
+import { useDailyQuest } from '../hooks/useDailyQuest';
+import { DailyQuestPanel } from './tatami/DailyQuestPanel';
 import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
 import { MODAL_LABELS, type ModalKind } from './tatami/modalRegistry';
 
@@ -299,6 +301,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   const handleFeedItemWithQuest = (item: FoodItem) => {
     handleFeedItem(item);
     firstQuest.markDone('feed');
+    dailyQuest.markQuestDone('feed');
   };
   const handleFinishBathWithQuest = (expGain: number, happinessGain: number) => {
     handleFinishBath(expGain, happinessGain);
@@ -308,6 +311,9 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     handleCleanAndBath();
     firstQuest.markDone('bath');
   };
+
+  // P4 (Revisi 6): quest harian & streak — dipicu dari aksi makan & mini-game.
+  const dailyQuest = useDailyQuest({ pet, setPet, showToast });
 
   // Idle Thought Bubble tap → open the suggested modal
   const handleThoughtClick = (thoughtType: string, _thoughtText: string) => {
@@ -387,6 +393,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
   // disciplineGained (opsional): bonus disiplin dari Wanage performa bagus (Revisi 4 bug #5).
   const handleGameReward = (coinsEarned: number, hapGained: number, disciplineGained?: number) => {
     firstQuest.markDone('minigame'); // P2 (Revisi 6): langkah mini-game Misi Pertama
+    dailyQuest.markQuestDone('game'); // P4 (Revisi 6): quest harian mini-game
     const expGain = Math.max(15, Math.floor(coinsEarned * 0.8) + 15);
     const expRes = addPetExp(pet.exp, pet.level, expGain);
 
@@ -898,6 +905,13 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
               {/* P2 (Revisi 6): Pertimbangan Inari — preview deterministik takdir evolusi */}
               <InariConsiderationCard pet={pet} />
+
+              {/* P4 (Revisi 6): Misi Harian + streak retensi */}
+              <DailyQuestPanel
+                streakCount={dailyQuest.view.streakCount}
+                feedDone={dailyQuest.isFeedDone}
+                gameDone={dailyQuest.isGameDone}
+              />
             </>
           )}
         </div>

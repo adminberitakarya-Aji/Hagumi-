@@ -5,7 +5,9 @@
  * Format save:
  *  - v1 (legacy): objek PetData mentah tanpa envelope — semua save yang dibuat
  *    sebelum versi schema ini ada.
- *  - v2 (current): { version: 2, data: PetData }
+ *  - v2: { version: 2, data: PetData }
+ *  - v3: + field `lastZenMeditationDate` (cooldown meditasi Zen)
+ *  - v4 (current): + field opsional `dailyQuest` (quest harian & streak, P4 Revisi 6)
  *
  * Aturan migration:
  *  - Save tanpa `version` dianggap v1 dan dimigrasi naik bertahap.
@@ -15,7 +17,7 @@
  *    data versi N+1. Tambahkan entri baru di MIGRATIONS saat PetData berubah.
  */
 
-import { PetData } from '../types/game';
+import { PetData, DailyQuestState } from '../types/game';
 import {
   DEFAULT_SANCTUARY_DECOR,
   DEFAULT_UNLOCKED_DECOR,
@@ -23,10 +25,28 @@ import {
   getBondingLevelInfo,
 } from '../data/gameConfig';
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** Kunci localStorage untuk backup save yang gagal divalidasi (jangan ditimpa otomatis). */
 export const CORRUPT_SAVE_BACKUP_KEY = 'HAGUMI_KITSUNE_SAVE_DATA_CORRUPT';
+
+/** Sanitasi state quest harian (P4 Revisi 6) — toleran terhadap data rusak/parial. */
+function sanitizeDailyQuest(raw: any): DailyQuestState | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const dateKey = (value: unknown, fallback: string): string =>
+    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : fallback;
+  const streak = typeof raw.streakCount === 'number' && raw.streakCount > 0 ? Math.floor(raw.streakCount) : 0;
+  const lastBonus =
+    typeof raw.lastBonusStreak === 'number' && raw.lastBonusStreak >= 0 ? Math.floor(raw.lastBonusStreak) : 0;
+  return {
+    questDate: dateKey(raw.questDate, ''),
+    feedDone: raw.feedDone === true,
+    gameDone: raw.gameDone === true,
+    streakCount: streak,
+    lastStreakDate: dateKey(raw.lastStreakDate, ''),
+    lastBonusStreak: Math.min(lastBonus, streak),
+  };
+}
 
 /**
  * Validasi & sanitasi PetData dari sumber tidak tepercaya (localStorage / import backup).
@@ -104,6 +124,7 @@ export function validateAndSanitizePetData(parsed: any): PetData {
       typeof parsed.lastZenMeditationDate === 'string' && parsed.lastZenMeditationDate
         ? parsed.lastZenMeditationDate.slice(0, 10)
         : undefined,
+    dailyQuest: sanitizeDailyQuest(parsed.dailyQuest),
   };
 
   const bondInfo = getBondingLevelInfo(sanitized.bondingPoints ?? 120);
@@ -130,10 +151,19 @@ function migrateV2ToV3(data: any): any {
   return data;
 }
 
+/**
+ * Migrasi v3 → v4: v4 menambahkan field opsional `dailyQuest` (quest harian &
+ * streak, P4 Revisi 6) — save lama cukup dibiarkan tanpa field (undefined).
+ */
+function migrateV3ToV4(data: any): any {
+  return data;
+}
+
 /** Chain migration: kunci = versi sumber, nilai = fungsi ke versi berikutnya. */
 const MIGRATIONS: Record<number, (data: any) => any> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
+  3: migrateV3ToV4,
 };
 
 /**
