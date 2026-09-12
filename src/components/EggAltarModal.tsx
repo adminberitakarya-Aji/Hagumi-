@@ -25,6 +25,7 @@ import {
 import { KitsuneCanvas } from './KitsuneCanvas';
 import { soundEngine } from '../utils/soundEngine';
 import { BackupRestoreModal } from './BackupRestoreModal';
+import { readPendingLineageBlessing } from '../utils/lineage';
 
 interface EggAltarModalProps {
   onHatchComplete: (newPet: PetData) => void;
@@ -64,7 +65,10 @@ export const EggAltarModal: React.FC<EggAltarModalProps> = ({ onHatchComplete })
     coins: 50,
     inventory: { onigiri: 3, ocha: 2 },
     favoriteFood: 'aburaage',
-    generation: 1,
+    // P5 (Revisi 6): telur lahir dengan generasi = target Restu Silsilah bila ada
+    // (generasi sebelumnya dilepas lewat dialog konfirmasi). Default 1 untuk
+    // pemain pertama kali.
+    generation: readPendingLineageBlessing()?.targetGeneration ?? 1,
     totalMiniGamesWon: 0,
     accessories: { neck: 'none', head: 'none' },
     unlockedAccessories: ['neck_none', 'head_none', 'head_leaf'],

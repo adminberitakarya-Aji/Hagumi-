@@ -36,6 +36,7 @@ export function createDailyQuestState(today: string): DailyQuestState {
     feedDone: false,
     gameDone: false,
     streakCount: 0,
+    bestStreak: 0,
     lastStreakDate: '',
     lastBonusStreak: 0,
   };
@@ -63,6 +64,7 @@ export function rollDailyState(
     feedDone: false,
     gameDone: false,
     streakCount: typeof prev?.streakCount === 'number' && prev.streakCount > 0 ? prev.streakCount : 0,
+    bestStreak: typeof prev?.bestStreak === 'number' && prev.bestStreak >= 0 ? prev.bestStreak : 0,
     lastStreakDate: typeof prev?.lastStreakDate === 'string' ? prev.lastStreakDate : '',
     lastBonusStreak: typeof prev?.lastBonusStreak === 'number' && prev.lastBonusStreak >= 0 ? prev.lastBonusStreak : 0,
   };

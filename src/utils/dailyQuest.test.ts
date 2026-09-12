@@ -43,17 +43,18 @@ describe('rollDailyState', () => {
   const TODAY = '2026-09-12';
 
   it('hari sama → state diteruskan apa adanya (identitas terjaga)', () => {
-    const prev = { questDate: TODAY, feedDone: true, gameDone: false, streakCount: 3, lastStreakDate: TODAY, lastBonusStreak: 0 };
+    const prev = { questDate: TODAY, feedDone: true, gameDone: false, streakCount: 3, bestStreak: 3, lastStreakDate: TODAY, lastBonusStreak: 0 };
     expect(rollDailyState(prev, TODAY)).toBe(prev);
   });
 
   it('hari baru → quest direset, streak & lastStreakDate dibawa', () => {
-    const prev = { questDate: '2026-09-11', feedDone: true, gameDone: true, streakCount: 4, lastStreakDate: '2026-09-11', lastBonusStreak: 0 };
+    const prev = { questDate: '2026-09-11', feedDone: true, gameDone: true, streakCount: 4, bestStreak: 9, lastStreakDate: '2026-09-11', lastBonusStreak: 0 };
     expect(rollDailyState(prev, TODAY)).toEqual({
       questDate: TODAY,
       feedDone: false,
       gameDone: false,
       streakCount: 4,
+      bestStreak: 9,
       lastStreakDate: '2026-09-11',
       lastBonusStreak: 0,
     });
@@ -61,7 +62,7 @@ describe('rollDailyState', () => {
 
   it('undefined → state kosong untuk hari tersebut', () => {
     expect(rollDailyState(undefined, TODAY)).toEqual({
-      questDate: TODAY, feedDone: false, gameDone: false, streakCount: 0, lastStreakDate: '', lastBonusStreak: 0,
+      questDate: TODAY, feedDone: false, gameDone: false, streakCount: 0, bestStreak: 0, lastStreakDate: '', lastBonusStreak: 0,
     });
   });
 
@@ -119,11 +120,11 @@ describe('applyStreakOnCompletion', () => {
   });
 });
 
-describe('integrasi schema save v4', () => {
-  const QUEST = { questDate: '2026-09-12', feedDone: true, gameDone: false, streakCount: 8, lastStreakDate: '2026-09-12', lastBonusStreak: 7 };
+describe('integrasi schema save v5', () => {
+  const QUEST = { questDate: '2026-09-12', feedDone: true, gameDone: false, streakCount: 8, bestStreak: 8, lastStreakDate: '2026-09-12', lastBonusStreak: 7 };
 
-  it('CURRENT_SCHEMA_VERSION = 4', () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(4);
+  it('CURRENT_SCHEMA_VERSION = 5 (P5: bestStreak + lineage)', () => {
+    expect(CURRENT_SCHEMA_VERSION).toBe(5);
   });
 
   it('roundtrip serialize → parse mempertahankan dailyQuest', () => {
@@ -145,7 +146,7 @@ describe('integrasi schema save v4', () => {
     );
     if (!result.ok) throw new Error(result.error);
     expect(result.pet.dailyQuest).toEqual({
-      questDate: '', feedDone: false, gameDone: false, streakCount: 0, lastStreakDate: '', lastBonusStreak: 0,
+      questDate: '', feedDone: false, gameDone: false, streakCount: 0, bestStreak: 0, lastStreakDate: '', lastBonusStreak: 0,
     });
   });
 });

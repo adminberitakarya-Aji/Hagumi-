@@ -127,6 +127,18 @@ export const HankoAlbumModal: React.FC<HankoAlbumModalProps> = ({
             <span>Dilahirkan pada: {birthDate}</span>
             <span>Generasi Ke-{pet.generation}</span>
           </div>
+
+          {/* P5 (Revisi 6): Restu Silsilah — warisan dari generasi sebelumnya */}
+          {pet.lineage && (
+            <div className="mt-2 p-2 rounded-lg bg-amber-50/80 border border-amber-200 text-[10px] text-stone-600 leading-snug">
+              <span className="font-bold text-amber-700">
+                ⛩️ Restu Silsilah dari {pet.lineage.elderName}
+              </span>{' '}
+              (Lv.{pet.lineage.elderLevel}, {pet.lineage.elderTails} ekor, streak terbaik 🔥
+              {pet.lineage.bestStreak}) — warisan{' '}
+              <strong>+{pet.lineage.inheritedCoins} Ryo</strong> diterima saat penetasan.
+            </div>
+          )}
         </div>
 
         {/* Footer actions */}

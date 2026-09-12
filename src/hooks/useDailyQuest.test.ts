@@ -109,6 +109,7 @@ describe('useDailyQuest', () => {
           feedDone: true,
           gameDone: false,
           streakCount: 6,
+          bestStreak: 6,
           lastStreakDate: '2026-09-12', // KEMARIN (fake time = 2026-09-13) → berurutan
           lastBonusStreak: 0,
         },

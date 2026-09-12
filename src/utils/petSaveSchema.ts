@@ -7,7 +7,9 @@
  *    sebelum versi schema ini ada.
  *  - v2: { version: 2, data: PetData }
  *  - v3: + field `lastZenMeditationDate` (cooldown meditasi Zen)
- *  - v4 (current): + field opsional `dailyQuest` (quest harian & streak, P4 Revisi 6)
+ *  - v4: + field opsional `dailyQuest` (quest harian & streak, P4 Revisi 6)
+ *  - v5 (current): + `dailyQuest.bestStreak` (rekor streak) & field opsional
+ *    `lineage` (Restu Silsilah lintas generasi, P5 Revisi 6)
  *
  * Aturan migration:
  *  - Save tanpa `version` dianggap v1 dan dimigrasi naik bertahap.
@@ -17,7 +19,7 @@
  *    data versi N+1. Tambahkan entri baru di MIGRATIONS saat PetData berubah.
  */
 
-import { PetData, DailyQuestState } from '../types/game';
+import { PetData, DailyQuestState, LineageBlessing } from '../types/game';
 import {
   DEFAULT_SANCTUARY_DECOR,
   DEFAULT_UNLOCKED_DECOR,
@@ -25,7 +27,7 @@ import {
   getBondingLevelInfo,
 } from '../data/gameConfig';
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /** Kunci localStorage untuk backup save yang gagal divalidasi (jangan ditimpa otomatis). */
 export const CORRUPT_SAVE_BACKUP_KEY = 'HAGUMI_KITSUNE_SAVE_DATA_CORRUPT';
@@ -43,8 +45,31 @@ function sanitizeDailyQuest(raw: any): DailyQuestState | undefined {
     feedDone: raw.feedDone === true,
     gameDone: raw.gameDone === true,
     streakCount: streak,
+    bestStreak: typeof raw.bestStreak === 'number' && raw.bestStreak >= 0 ? Math.min(9999, Math.floor(raw.bestStreak)) : streak,
     lastStreakDate: dateKey(raw.lastStreakDate, ''),
     lastBonusStreak: Math.min(lastBonus, streak),
+  };
+}
+
+/** Sanitasi Restu Silsilah (P5 Revisi 6) — field opsional; korup → undefined. */
+function sanitizeLineage(raw: any): LineageBlessing | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const targetGeneration =
+    typeof raw.targetGeneration === 'number' && raw.targetGeneration >= 2
+      ? Math.floor(raw.targetGeneration)
+      : 0;
+  if (targetGeneration < 2) return undefined;
+  const bounded = (value: unknown, min: number, max: number): number =>
+    typeof value === 'number' && value >= min ? Math.min(max, Math.floor(value)) : min;
+  return {
+    targetGeneration,
+    elderName: typeof raw.elderName === 'string' && raw.elderName ? raw.elderName.slice(0, 20) : 'Elder',
+    elderLevel: bounded(raw.elderLevel, 1, 9999),
+    elderForm: typeof raw.elderForm === 'string' && raw.elderForm ? raw.elderForm.slice(0, 30) : 'kogitsune',
+    elderTails: bounded(raw.elderTails, 0, 9),
+    bestStreak: bounded(raw.bestStreak, 0, 9999),
+    inheritedCoins: bounded(raw.inheritedCoins, 0, 500),
+    recordedAt: typeof raw.recordedAt === 'number' ? raw.recordedAt : 0,
   };
 }
 
@@ -125,6 +150,7 @@ export function validateAndSanitizePetData(parsed: any): PetData {
         ? parsed.lastZenMeditationDate.slice(0, 10)
         : undefined,
     dailyQuest: sanitizeDailyQuest(parsed.dailyQuest),
+    lineage: sanitizeLineage(parsed.lineage),
   };
 
   const bondInfo = getBondingLevelInfo(sanitized.bondingPoints ?? 120);
@@ -159,11 +185,21 @@ function migrateV3ToV4(data: any): any {
   return data;
 }
 
+/**
+ * Migrasi v4 → v5: v5 menambahkan `dailyQuest.bestStreak` (rekor streak) dan
+ * field opsional `lineage` (Restu Silsilah, P5 Revisi 6) — save lama cukup
+ * dibiarkan tanpa field (undefined); sanitasi mengisi default yang aman.
+ */
+function migrateV4ToV5(data: any): any {
+  return data;
+}
+
 /** Chain migration: kunci = versi sumber, nilai = fungsi ke versi berikutnya. */
 const MIGRATIONS: Record<number, (data: any) => any> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
   3: migrateV3ToV4,
+  4: migrateV4ToV5,
 };
 
 /**

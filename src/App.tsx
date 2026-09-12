@@ -5,6 +5,7 @@ import { EvolutionTarget, determineNextEvolution } from './data/gameConfig';
 import { PetData } from './types/game';
 import { DialogA11yWrapper } from './hooks/useDialogA11y';
 import { applyStoredTextScale } from './utils/textScale';
+import { readPendingLineageBlessing } from './utils/lineage';
 
 // CODE SPLITTING (Revisi 4 bug #4): layar berat yang kondisional di-lazy-load
 // agar tidak ikut dalam bundle utama (pemain lama tidak pernah memuat Prolog/
@@ -83,6 +84,25 @@ export default function App() {
       setActiveEvolution(nextEvo);
     }
   }, [pet?.stage, pet?.level, pet?.ageDays, pet?.careScore, pet?.stats.discipline, activeEvolution]);
+
+  // P5 (Revisi 6): Restu Silsilah — diterapkan otomatis begitu telur generasi
+  // target menetas (pet.lineage kosong + generation cocok). Koin warisan
+  // ditambahkan; field lineage menandai silsilah untuk Album Hanko. Aman dari
+  // dobel: setelah diterapkan, pet.lineage terisi sehingga guard mengembalikan.
+  useEffect(() => {
+    if (!pet || pet.lineage) return;
+    const blessing = readPendingLineageBlessing();
+    if (!blessing || blessing.targetGeneration !== pet.generation) return;
+    setPet((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        generation: blessing.targetGeneration,
+        lineage: blessing,
+        coins: prev.coins + blessing.inheritedCoins,
+      };
+    });
+  }, [pet, setPet]);
 
   // Handle claiming Omamori blessing reward from Prologue
   // Reward masuk buffer dulu; flushing ke pet dilakukan oleh useEffect di bawah

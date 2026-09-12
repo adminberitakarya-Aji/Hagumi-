@@ -117,6 +117,8 @@ export interface PetData {
   lastZenMeditationDate?: string;
   /** P4 (Revisi 6): quest harian & streak retensi (lihat src/utils/dailyQuest.ts). */
   dailyQuest?: DailyQuestState;
+  /** P5 (Revisi 6): Restu Silsilah — warisan dari generasi sebelumnya (opsional). */
+  lineage?: LineageBlessing;
   activeOdekake?: OdekakeTrip;
   completedOdekakes?: number;
   unlockedPostcards?: string[];
@@ -124,6 +126,25 @@ export interface PetData {
 }
 
 export type WishCategory = 'health' | 'fortune' | 'bonding' | 'wisdom' | 'peace';
+
+/**
+ * P5 (Revisi 6): "Restu Silsilah" — warisan lintas generasi saat melepas kitsune.
+ * Disimpan di kunci localStorage terpisah (selamat dari reset save), lalu
+ * diterapkan otomatis ke telur generasi berikutnya. Logika di src/utils/lineage.ts.
+ */
+export interface LineageBlessing {
+  /** Nomor generasi yang akan menerima restu ini. */
+  targetGeneration: number;
+  elderName: string;
+  elderLevel: number;
+  elderForm: string;
+  elderTails: number;
+  /** Rekor streak terbaik sang elder. */
+  bestStreak: number;
+  /** Koin warisan yang diterima generasi berikutnya (bounded, lihat lineage.ts). */
+  inheritedCoins: number;
+  recordedAt: number;
+}
 
 /**
  * P4 (Revisi 6): state quest harian & streak. Tersimpan di save (schema v4) —
@@ -139,6 +160,8 @@ export interface DailyQuestState {
   gameDone: boolean;
   /** Jumlah hari berturut-turut menuntaskan minimal 1 quest. */
   streakCount: number;
+  /** Rekor streak terbaik sepanjang hidup kitsune ini (dipakai Restu Silsilah, P5). */
+  bestStreak: number;
   /** Tanggal lokal terakhir streak di-update (YYYY-MM-DD). */
   lastStreakDate: string;
   /** Nilai streak terakhir yang sudah diklaim bonusnya (kelipatan 7). */

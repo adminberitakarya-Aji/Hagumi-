@@ -73,6 +73,7 @@ export function useDailyQuest({ pet, setPet, showToast }: UseDailyQuestOptions) 
           ...prevRolled,
           [key]: true,
           streakCount: streakNow.streakCount,
+          bestStreak: Math.max(prevRolled.bestStreak ?? 0, streakNow.streakCount),
           lastStreakDate: streakNow.lastStreakDate,
           lastBonusStreak: streakNow.bonusClaimed ? streakNow.streakCount : prevRolled.lastBonusStreak,
         },

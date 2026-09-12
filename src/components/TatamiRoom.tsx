@@ -43,6 +43,7 @@ import { FirstQuestBanner } from './tatami/FirstQuestBanner';
 import { InariConsiderationCard } from './tatami/InariConsiderationCard';
 import { useDailyQuest } from '../hooks/useDailyQuest';
 import { DailyQuestPanel } from './tatami/DailyQuestPanel';
+import { createLineageBlessing, recordLineageBlessing } from '../utils/lineage';
 import { DEFAULT_SANCTUARY_DECOR, DEFAULT_UNLOCKED_DECOR } from '../data/gameConfig';
 import { MODAL_LABELS, type ModalKind } from './tatami/modalRegistry';
 
@@ -261,8 +262,15 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
     setIsResetConfirmOpen(false);
     soundEngine.playShrineBell();
     hapticEngine.heavy();
+    // P5 (Revisi 6): rekam Restu Silsilah SEBELUM reset — warisan lintas
+    // generasi diterapkan otomatis saat telur generasi berikutnya menetas.
+    recordLineageBlessing(pet);
     onResetPet();
   };
+
+  // P5 (Revisi 6): preview Restu Silsilah untuk dialog konfirmasi (hitungan
+  // sama dengan createLineageBlessing — level & streak terbaik generasi ini).
+  const lineagePreview = createLineageBlessing(pet);
 
   // Cluster logika Odekake diekstrak ke src/hooks/useOdekakeFlow.ts (Mid-Term #4)
   const {
@@ -314,6 +322,19 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
 
   // P4 (Revisi 6): quest harian & streak — dipicu dari aksi makan & mini-game.
   const dailyQuest = useDailyQuest({ pet, setPet, showToast });
+
+  // P5 (Revisi 6): sambutan Restu Silsilah — sekali per kitsune (ref guard),
+  // muncul di ruangan setelah telur generasi berikutnya menetas & restu aktif.
+  const lineageGreetedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pet.lineage || lineageGreetedRef.current === pet.id) return;
+    lineageGreetedRef.current = pet.id;
+    const l = pet.lineage;
+    showToast(
+      `⛩️ Restu Silsilah dari ${l.elderName} (Lv.${l.elderLevel}, ${l.elderTails} ekor) mewariskan +${l.inheritedCoins} Ryo untuk ${pet.name}!`
+    );
+    soundEngine.playShrineBell();
+  }, [pet, showToast]);
 
   // Idle Thought Bubble tap → open the suggested modal
   const handleThoughtClick = (thoughtType: string, _thoughtText: string) => {
@@ -981,6 +1002,7 @@ export const TatamiRoom: React.FC<TatamiRoomProps> = ({
       {isResetConfirmOpen && (
         <ResetConfirmDialog
           petName={pet.name}
+          blessing={lineagePreview}
           onConfirm={handleConfirmReset}
           onCancel={() => setIsResetConfirmOpen(false)}
         />

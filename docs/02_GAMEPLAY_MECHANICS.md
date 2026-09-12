@@ -284,6 +284,40 @@ otomatis mengangkat kualitas pengasuhan keseluruhan, bukan hanya jalur evolusi Z
 > Saat mengubah angka/aturan di `dailyQuest.ts`, perbarui bagian ini di commit yang sama.
 > Guard sinkronisasi ada di `src/utils/dailyQuest.test.ts` & `src/utils/petSaveSchema.test.ts`.
 
+## 🧬 10. Restu Silsilah (*Lineage Blessing*) — P5 Revisi 6
+
+> Sumber kebenaran: `src/utils/lineage.ts`, penerapan di `src/App.tsx` (efek penetasan),
+> `EggAltarModal.tsx` (nomor generasi), `ResetConfirmDialog.tsx` (preview), `HankoAlbumModal.tsx`
+> (tampilan silsilah). Tujuan P5: **reinkarnasi punya insentif** — pemisahan generasi bukan
+> reset total, melainkan pewarisan restu.
+
+### 10.1 Alur
+
+1. **Pemisahan**: konfirmasi "Mulai Generasi Baru" (`ResetConfirmDialog`) merekam
+   `LineageBlessing` ke kunci localStorage **terpisah** (`HAGUMI_LINEAGE_BLESSING` — pola
+   cooldown elusan) SEBELUM save direset, sehingga warisan selamat dari penghapusan.
+2. **Penetasan**: `EggAltarModal` membaca blessing — telur lahir dengan
+   `generation = targetGeneration` (bukan 1 lagi; memperbaiki silsilah yang sebelumnya
+   tak pernah naik).
+3. **Penerapan**: efek di `App.tsx` mencocokkan `pet.generation === blessing.targetGeneration`
+   lalu menerapkan field `lineage` + **koin warisan** (sekali — guard `pet.lineage`).
+   `TatamiRoom` menyambut dengan toast + lonceng kuil sekali per kitsune.
+
+### 10.2 Perhitungan Warisan (BOUNDED — anti-inflasi)
+
+`inheritedCoins = min(500, levelElder × 5 + streakTerbaik × 2)`
+
+- `streakTerbaik` = rekor streak quest harian sepanjang hidup elder (`dailyQuest.bestStreak`,
+  P4 §9). Contoh: Lv.40 + streak 12 → min(500, 200+24) = **224 Ryo**.
+- Batas atas **500 Ryo** per generasi — warisan tidak pernah melampaui ekonomi bento/mini-game.
+
+### 10.3 Catatan
+
+- Field `lineage` opsional (schema save v5) — pemain pertama kali & restore backup lama
+  tetap valid.
+- Tidak ada degradasi: warisan hanya koin modal awal; stat/level/careScore generasi baru
+  selalu mulai wajar (evolusi tetap ditentukan perawatan §3/§8).
+
 ## 📎 Catatan Pemeliharaan Dokumen
 
 - Dokumen ini dibuat ulang pada 8 September 2026 sebagai koreksi atas temuan audit (lihat `audit.md`):
